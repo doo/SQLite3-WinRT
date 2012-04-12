@@ -40,6 +40,14 @@
     expect(rows[1].name).toEqual('Orange');
   });
 
+  it('should throw when creating an invalid database', function () {
+    expect(function () { new SQLite3js.Database('invalid path'); }).toThrow();
+  });
+
+  it('should throw when executing an invalid statement', function () {
+    expect(function () { db.execute('invalid sql'); }).toThrow();
+  });
+
   it('should pass JSLint', function () {
     var source = null;
 
