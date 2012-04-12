@@ -4,12 +4,12 @@ A set of SQLite wrappers for WinRT (Windows Metro) applications.
 
 ## Status
 
-Please note that _SQLite3-WinRT_ is in an early stage of development. The API
-is incomplete, still likely to change, and it hasn't been used in the Windows
-Store, yet. Nonetheless, _SQLite3-WinRT_ is intended for production use and
-Windows Store compatibility, and it will mature as the Windows 8 platform
-itself matures. Feedback and contributions are highly appreciated, feel free
-to open issues or pull requests on GitHub.
+Please note that _SQLite3-WinRT_ is in an early stage of development. The API is
+incomplete, still likely to change, and it hasn't been used in apps published
+via the Windows Store, yet. Nonetheless, _SQLite3-WinRT_ is intended for
+production use and Windows Store compatibility, and it will mature as the
+Windows 8 platform itself matures. Feedback and contributions are highly
+appreciated, feel free to open issues or pull requests on GitHub.
 
 ## _SQLite3_
 
