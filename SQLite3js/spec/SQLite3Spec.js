@@ -13,7 +13,7 @@
     db.execute('DROP TABLE Item');
     db.close();
   });
-  
+
   it('should return the correct count', function () {
     var rows;
 
@@ -38,5 +38,40 @@
     expect(rows.length).toEqual(2);
     expect(rows[0].name).toEqual('Apple');
     expect(rows[1].name).toEqual('Orange');
+  });
+
+  it('should pass JSLint', function () {
+    var source = null;
+
+    this.addMatchers({
+      toPassJsLint: function () {
+        if (JSLINT(this.actual, { indent: 2, predef: ['SQLite3', 'WinJS'] })) {
+          return true;
+        } else {
+          var message = document.createElement('div');
+          WinJS.Utilities.setInnerHTML(message, JSLINT.report(true));
+
+          this.message = function () {
+            return message;
+          };
+          return false;
+        }
+      }
+    });
+
+    runs(function () {
+      var sourceUri = new Windows.Foundation.Uri('ms-appx:///js/SQLite3.js');
+      Windows.Storage.StorageFile.getFileFromApplicationUriAsync(sourceUri).then(function (file) {
+        Windows.Storage.FileIO.readTextAsync(file).then(function (string) {
+          source = string.substr(1); // Skip unicode byte order mark (BOM)
+        });
+      });
+    });
+    waitsFor(function () {
+      return source !== null;
+    });
+    runs(function () {
+      expect(source).toPassJsLint();
+    });
   });
 });
