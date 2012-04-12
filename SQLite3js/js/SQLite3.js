@@ -1,19 +1,21 @@
 ﻿(function () {
   "use strict";
 
-  var Statement = WinJS.Class.define(function (statement) {
+  var Statement, Database;
+
+  Statement = WinJS.Class.define(function (statement) {
     this.statement = statement;
   }, {
     bindArgs: function (args) {
       var i, len, arg, index, resultCode;
 
       if (args) {
-        for (i = 0, len = args.length; i < len; i++) {
+        for (i = 0, len = args.length; i < len; i += 1) {
           arg = args[i];
           index = i + 1;
           switch (typeof arg) {
             case 'number':
-              if (arg === +arg && arg === (arg | 0)) {
+              if (arg % 1 === 0) {
                 resultCode = this.statement.bindInt(index, arg);
               } else {
                 resultCode = this.statement.bindDouble(index, arg);
@@ -36,7 +38,7 @@
 
       while (this.statement.step() === SQLite3.ResultCode.row) {
         row = {};
-        for (i = 0, len = this.statement.columnCount() ; i < len; i++) {
+        for (i = 0, len = this.statement.columnCount() ; i < len; i += 1) {
           name = this.statement.columnName(i);
           switch (this.statement.columnType(i)) {
             case SQLite3.Datatype.integer:
@@ -50,6 +52,7 @@
               break;
             case SQLite3.Datatype["null"]:
               row[name] = null;
+              break;
           }
         }
         result.push(row);
@@ -61,7 +64,7 @@
     }
   });
 
-  var Database = WinJS.Class.define(function (dbPath) {
+  Database = WinJS.Class.define(function (dbPath) {
     this.db = SQLite3.Database(dbPath);
   }, {
     execute: function (sql, args) {
@@ -82,4 +85,4 @@
     Database: Database
   });
 
-})();
+}());

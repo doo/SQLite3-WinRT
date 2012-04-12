@@ -45,7 +45,7 @@
 
     this.addMatchers({
       toPassJsLint: function () {
-        if (JSLINT(this.actual, { indent: 2, predef: ['SQLite3', 'WinJS'] })) {
+        if (JSLINT(this.actual, { white: true, predef: ['SQLite3', 'WinJS'] })) {
           return true;
         } else {
           var message = document.createElement('div');
