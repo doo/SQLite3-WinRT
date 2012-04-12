@@ -31,6 +31,17 @@
     expect(rows[0].id).toEqual(2);
   });
 
+  it('should return an item by id using a callback', function () {
+    var rows;
+
+    rows = db.execute('SELECT * FROM Item WHERE id = ?', [2], function (row) {
+      expect(row.name).toEqual('Orange');
+      expect(row.price).toEqual(2.5);
+      expect(row.id).toEqual(2);
+    });
+    expect(rows).toBeUndefined();
+  });
+
   it('should return items with names ending on "e"', function () {
     var expectedValues, i, properties, property, rows, _i, _len, _ref;
 
