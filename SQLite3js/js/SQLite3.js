@@ -7,11 +7,10 @@
     this.statement = statement;
   }, {
     bindArgs: function (args) {
-      var i, len, arg, index, resultCode;
+      var index, resultCode;
 
       if (args) {
-        for (i = 0, len = args.length; i < len; i += 1) {
-          arg = args[i];
+        args.forEach(function (arg, i) {
           index = i + 1;
           switch (typeof arg) {
             case 'number':
@@ -30,7 +29,7 @@
           if (resultCode !== SQLite3.ResultCode.ok) {
             throw new Error("Error " + resultCode + " when binding argument to SQL query.");
           }
-        }
+        }, this);
       }
     },
     execute: function () {
