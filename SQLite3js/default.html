@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SQLite3js</title>
+
+    <!-- WinJS -->
+    <script src="//Microsoft.WinJS.0.6/js/base.js"></script>
+    <script src="//Microsoft.WinJS.0.6/js/ui.js"></script>
+
+    <!-- Jasmine -->
+    <link href="/lib/jasmine-1.1.0/jasmine.css" rel="stylesheet">
+    <script src="/lib/jasmine-1.1.0/jasmine.js"></script>
+    <script src="/lib/jasmine-1.1.0/jasmine-html.js"></script>
+
+    <!-- SQLite3js -->
+    <script src="/js/SQLite3.js"></script>
+    <script src="/spec/SQLite3Spec.js"></script>
+
+    <script type="text/javascript">
+        (function () {
+            var jasmineEnv = jasmine.getEnv();
+            jasmineEnv.updateInterval = 1000;
+
+            var htmlReporter = new jasmine.HtmlReporter();
+
+            jasmineEnv.addReporter(htmlReporter);
+
+            jasmineEnv.specFilter = function (spec) {
+                return htmlReporter.specFilter(spec);
+            };
+
+            var currentWindowOnload = window.onload;
+
+            window.onload = function () {
+                if (currentWindowOnload) {
+                    currentWindowOnload();
+                }
+                execJasmine();
+            };
+
+            function execJasmine() {
+                jasmineEnv.execute();
+            }
+        })();
+    </script>
+</head>
+<body>
+</body>
+</html>
