@@ -1,8 +1,8 @@
-﻿describe('SQLite3js', function () {
+﻿describe('SQLite3JS', function () {
   var db = null;
 
   beforeEach(function () {
-    db = new SQLite3js.Database(':memory:');
+    db = new SQLite3JS.Database(':memory:');
     db.execute('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
     db.execute('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Apple', 1.2, 1]);
     db.execute('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Orange', 2.5, 2]);
@@ -41,7 +41,7 @@
   });
 
   it('should throw when creating an invalid database', function () {
-    expect(function () { new SQLite3js.Database('invalid path'); }).toThrow();
+    expect(function () { new SQLite3JS.Database('invalid path'); }).toThrow();
   });
 
   it('should throw when executing an invalid statement', function () {

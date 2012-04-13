@@ -80,7 +80,7 @@
     }
   });
 
-  WinJS.Namespace.define('SQLite3js', {
+  WinJS.Namespace.define('SQLite3JS', {
     Database: Database
   });
 

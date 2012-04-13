@@ -44,7 +44,7 @@
     <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
     <TargetPlatformVersion>8.0</TargetPlatformVersion>
     <DefaultLanguage>en-US</DefaultLanguage>
-    <PackageCertificateKeyFile>SQLite3js_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateKeyFile>SQLite3JS_TemporaryKey.pfx</PackageCertificateKeyFile>
     <PackageCertificateThumbprint>74097B4D218EFB7BB78E01A5894E369B9210A584</PackageCertificateThumbprint>
   </PropertyGroup>
   <ItemGroup>
@@ -63,7 +63,7 @@
     <Content Include="lib\jasmine-1.1.0\MIT.LICENSE" />
     <Content Include="lib\jslint\jslint.js" />
     <Content Include="spec\SQLite3Spec.js" />
-    <None Include="SQLite3js_TemporaryKey.pfx" />
+    <None Include="SQLite3JS_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
     <SDKReference Include="Microsoft.WinJS, Version=0.6" />

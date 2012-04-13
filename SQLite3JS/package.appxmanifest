@@ -7,8 +7,8 @@
     Publisher="CN=guido" />
 
   <Properties>
-    <DisplayName>SQLite3js</DisplayName>
-    <Description>SQLite3js</Description>
+    <DisplayName>SQLite3JS</DisplayName>
+    <Description>SQLite3JS</Description>
     <PublisherDisplayName>guido</PublisherDisplayName>
     <Logo>images\storelogo.png</Logo>
   </Properties>
@@ -28,10 +28,10 @@
       StartPage="default.html">
 
       <VisualElements
-        DisplayName="SQLite3js"
+        DisplayName="SQLite3JS"
         Logo="images\logo.png"
         SmallLogo="images\smalllogo.png"
-        Description="SQLite3js"
+        Description="SQLite3JS"
         ForegroundText="light"
         BackgroundColor="#000000">
 
