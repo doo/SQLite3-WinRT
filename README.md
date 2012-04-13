@@ -44,7 +44,7 @@ other than that, it is a one-to-one copy of the original SQLite API.
 
     db.close();
 
-## _SQLite3js_
+## _SQLite3JS_
 
 This abstraction layer on top of the _SQLite3_ component facilitates using
 SQLite in JavaScript applications.
@@ -52,7 +52,7 @@ SQLite in JavaScript applications.
 ### JavaScript Example
 
     dbPath = Windows.Storage.ApplicationData.current.localFolder.path + '\\db.sqlite';
-    db = new SQLite3js.Database(dbPath);
+    db = new SQLite3JS.Database(dbPath);
 
     db.execute('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
     db.execute('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Mango', 4.6, 123]);
