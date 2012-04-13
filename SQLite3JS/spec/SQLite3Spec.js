@@ -40,6 +40,17 @@
     expect(rows[1].name).toEqual('Orange');
   });
 
+  it('should allow binding null arguments', function () {
+    var rows, name = 'Mango';
+
+    db.execute('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', [name, null, null]);
+    rows = db.execute('SELECT * FROM Item WHERE name = ?', [name]);
+    expect(rows.length).toEqual(1);
+    expect(rows[0].name).toEqual(name);
+    expect(rows[0].price).toEqual(null);
+    expect(rows[0].id).toEqual(null);
+  });
+
   it('should throw when creating an invalid database', function () {
     expect(function () { new SQLite3JS.Database('invalid path'); }).toThrow();
   });

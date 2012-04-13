@@ -68,4 +68,9 @@ namespace SQLite3
   {
     return sqlite3_bind_double(statement, index, val);
   }
+
+  int Statement::BindNull(int index)
+  {
+    return sqlite3_bind_null(statement, index);
+  }
 }

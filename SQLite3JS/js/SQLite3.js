@@ -3,6 +3,15 @@
 
   var Statement, Database;
 
+  // Alternative typeof implementation yielding more meaningful results,
+  // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
+  function type(obj) {
+    var typeString;
+
+    typeString = Object.prototype.toString.call(obj);
+    return typeString.match(/\s(\w+)/)[1].toLowerCase();
+  }
+
   Statement = WinJS.Class.define(function (statement) {
     this.statement = statement;
   }, {
@@ -12,7 +21,7 @@
       if (args) {
         args.forEach(function (arg, i) {
           index = i + 1;
-          switch (typeof arg) {
+          switch (type(arg)) {
             case 'number':
               if (arg % 1 === 0) {
                 resultCode = this.statement.bindInt(index, arg);
@@ -22,6 +31,9 @@
               break;
             case 'string':
               resultCode = this.statement.bindText(index, arg);
+              break;
+            case 'null':
+              resultCode = this.statement.bindNull(index);
               break;
             default:
               throw new Error("Unsupported argument type.");

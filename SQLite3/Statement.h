@@ -25,6 +25,7 @@ namespace SQLite3
     int BindText(int index, Platform::String^ val);
     int BindInt(int index, int val);
     int BindDouble(int index, double val);
+    int BindNull(int index);
 
   private:
     sqlite3_stmt* statement;
