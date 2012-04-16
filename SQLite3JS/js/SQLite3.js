@@ -9,7 +9,7 @@
     var typeString;
 
     typeString = Object.prototype.toString.call(obj);
-    return typeString.match(/\s(\w+)/)[1].toLowerCase();
+    return typeString.substring(8, typeString.length - 1).toLowerCase();
   }
 
   Statement = WinJS.Class.define(function (statement) {
