@@ -44,7 +44,10 @@
         }, this);
       }
     },
-    execute: function () {
+    run: function () {
+      this.statement.step();
+    },
+    all: function () {
       var result = [], row, i, len, name;
 
       while (this.statement.step() === SQLite3.ResultCode.row) {
@@ -78,12 +81,20 @@
   Database = WinJS.Class.define(function (dbPath) {
     this.db = SQLite3.Database(dbPath);
   }, {
-    execute: function (sql, args) {
+    run: function (sql, args) {
+      var statement;
+
+      statement = new Statement(this.db.prepare(sql));
+      statement.bindArgs(args);
+      statement.run();
+      statement.close();
+    },
+    all: function (sql, args) {
       var statement, rows;
 
       statement = new Statement(this.db.prepare(sql));
       statement.bindArgs(args);
-      rows = statement.execute();
+      rows = statement.all();
       statement.close();
       return rows;
     },

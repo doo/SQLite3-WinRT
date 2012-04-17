@@ -54,10 +54,10 @@ SQLite in JavaScript applications.
     dbPath = Windows.Storage.ApplicationData.current.localFolder.path + '\\db.sqlite';
     db = new SQLite3JS.Database(dbPath);
 
-    db.execute('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
-    db.execute('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Mango', 4.6, 123]);
+    db.run('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
+    db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Mango', 4.6, 123]);
 
-    rows = db.execute('SELECT * FROM Item');
+    rows = db.all('SELECT * FROM Item');
     rows.forEach(function (row) {
       name = row.name;
       price = row.price;
