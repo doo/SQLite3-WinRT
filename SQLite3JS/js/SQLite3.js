@@ -12,38 +12,12 @@
     return typeString.substring(8, typeString.length - 1).toLowerCase();
   }
 
-  Statement = WinJS.Class.define(function (statement) {
+  Statement = WinJS.Class.define(function (statement, args) {
     this.statement = statement;
+    if (args) {
+      this._bindArgs(args);
+    }
   }, {
-    bindArgs: function (args) {
-      var index, resultCode;
-
-      if (args) {
-        args.forEach(function (arg, i) {
-          index = i + 1;
-          switch (type(arg)) {
-            case 'number':
-              if (arg % 1 === 0) {
-                resultCode = this.statement.bindInt(index, arg);
-              } else {
-                resultCode = this.statement.bindDouble(index, arg);
-              }
-              break;
-            case 'string':
-              resultCode = this.statement.bindText(index, arg);
-              break;
-            case 'null':
-              resultCode = this.statement.bindNull(index);
-              break;
-            default:
-              throw new Error("Unsupported argument type.");
-          }
-          if (resultCode !== SQLite3.ResultCode.ok) {
-            throw new Error("Error " + resultCode + " when binding argument to SQL query.");
-          }
-        }, this);
-      }
-    },
     run: function () {
       this.statement.step();
     },
@@ -75,6 +49,33 @@
     },
     close: function () {
       this.statement.close();
+    },
+    _bindArgs: function (args) {
+      var index, resultCode;
+
+      args.forEach(function (arg, i) {
+        index = i + 1;
+        switch (type(arg)) {
+          case 'number':
+            if (arg % 1 === 0) {
+              resultCode = this.statement.bindInt(index, arg);
+            } else {
+              resultCode = this.statement.bindDouble(index, arg);
+            }
+            break;
+          case 'string':
+            resultCode = this.statement.bindText(index, arg);
+            break;
+          case 'null':
+            resultCode = this.statement.bindNull(index);
+            break;
+          default:
+            throw new Error("Unsupported argument type.");
+        }
+        if (resultCode !== SQLite3.ResultCode.ok) {
+          throw new Error("Error " + resultCode + " when binding argument to SQL query.");
+        }
+      }, this);
     }
   });
 
@@ -82,18 +83,14 @@
     this.db = SQLite3.Database(dbPath);
   }, {
     run: function (sql, args) {
-      var statement;
+      var statement = new Statement(this.db.prepare(sql), args);
 
-      statement = new Statement(this.db.prepare(sql));
-      statement.bindArgs(args);
       statement.run();
       statement.close();
     },
     all: function (sql, args) {
-      var statement, rows;
+      var rows, statement = new Statement(this.db.prepare(sql), args);
 
-      statement = new Statement(this.db.prepare(sql));
-      statement.bindArgs(args);
       rows = statement.all();
       statement.close();
       return rows;
@@ -101,10 +98,10 @@
     close: function () {
       this.db.close();
     }
-  });
+});
 
-  WinJS.Namespace.define('SQLite3JS', {
-    Database: Database
-  });
+WinJS.Namespace.define('SQLite3JS', {
+  Database: Database
+});
 
 }());
