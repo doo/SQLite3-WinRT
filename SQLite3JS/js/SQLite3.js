@@ -15,9 +15,36 @@
   Statement = WinJS.Class.define(function (statement, args) {
     this.statement = statement;
     if (args) {
-      this._bindArgs(args);
+      this.bind(args);
     }
   }, {
+    bind: function (args) {
+      var index, resultCode;
+
+      args.forEach(function (arg, i) {
+        index = i + 1;
+        switch (type(arg)) {
+          case 'number':
+            if (arg % 1 === 0) {
+              resultCode = this.statement.bindInt(index, arg);
+            } else {
+              resultCode = this.statement.bindDouble(index, arg);
+            }
+            break;
+          case 'string':
+            resultCode = this.statement.bindText(index, arg);
+            break;
+          case 'null':
+            resultCode = this.statement.bindNull(index);
+            break;
+          default:
+            throw new Error("Unsupported argument type.");
+        }
+        if (resultCode !== SQLite3.ResultCode.ok) {
+          throw new Error("Error " + resultCode + " when binding argument to SQL query.");
+        }
+      }, this);
+    },
     run: function () {
       this.statement.step();
     },
@@ -49,33 +76,6 @@
     },
     close: function () {
       this.statement.close();
-    },
-    _bindArgs: function (args) {
-      var index, resultCode;
-
-      args.forEach(function (arg, i) {
-        index = i + 1;
-        switch (type(arg)) {
-          case 'number':
-            if (arg % 1 === 0) {
-              resultCode = this.statement.bindInt(index, arg);
-            } else {
-              resultCode = this.statement.bindDouble(index, arg);
-            }
-            break;
-          case 'string':
-            resultCode = this.statement.bindText(index, arg);
-            break;
-          case 'null':
-            resultCode = this.statement.bindNull(index);
-            break;
-          default:
-            throw new Error("Unsupported argument type.");
-        }
-        if (resultCode !== SQLite3.ResultCode.ok) {
-          throw new Error("Error " + resultCode + " when binding argument to SQL query.");
-        }
-      }, this);
     }
   });
 
