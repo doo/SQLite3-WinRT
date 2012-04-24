@@ -1,3 +1,5 @@
+#include "Winerror.h"
+
 #include "Statement.h"
 #include "Database.h"
 
@@ -10,7 +12,9 @@ namespace SQLite3
     if (ret != SQLITE_OK)
     {
       sqlite3_finalize(statement);
-      throw ref new Platform::FailureException;
+
+      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
+      throw ref new Platform::COMException(hresult);
     }
   }
 

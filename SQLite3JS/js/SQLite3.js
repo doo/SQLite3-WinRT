@@ -12,8 +12,19 @@
     return typeString.substring(8, typeString.length - 1).toLowerCase();
   }
 
+  function throwSQLiteError(message, comException) {
+    var error = new Error(message);
+    error.resultCode = comException.number & 0xffff;
+    throw error;
+  }
+
   Statement = WinJS.Class.define(function (db, sql, args) {
-    this.statement = db.connection.prepare(sql);
+    try {
+      this.statement = db.connection.prepare(sql);
+    } catch (comException) {
+      throwSQLiteError('Error preparing an SQLite statement.', comException);
+    }
+
     if (args) {
       this.bind(args);
     }
@@ -80,7 +91,11 @@
   });
 
   Database = WinJS.Class.define(function (dbPath) {
-    this.connection = SQLite3.Database(dbPath);
+    try {
+      this.connection = SQLite3.Database(dbPath);
+    } catch (comException) {
+      throwSQLiteError('Error creating an SQLite database connection.', comException);
+    }
   }, {
     run: function (sql, args) {
       var statement = new Statement(this, sql, args);

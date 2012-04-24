@@ -51,12 +51,31 @@
     expect(rows[0].id).toEqual(null);
   });
 
-  it('should throw when creating an invalid database', function () {
-    expect(function () { new SQLite3JS.Database('invalid path'); }).toThrow();
-  });
+  describe('Error Handling', function () {
+    beforeEach(function () {
+      this.addMatchers({
+        toThrowWithResultCode: function (expected) {
+          try {
+            this.actual();
+            return false;
+          } catch (error) {
+            return error.resultCode === expected;
+          }
+        }
+      });
+    });
 
-  it('should throw when executing an invalid statement', function () {
-    expect(function () { db.run('invalid sql'); }).toThrow();
+    it('should throw when creating an invalid database', function () {
+      expect(function () {
+        new SQLite3JS.Database('invalid path');
+      }).toThrowWithResultCode(SQLite3.ResultCode.cantOpen);
+    });
+
+    it('should throw when executing an invalid statement', function () {
+      expect(function () {
+        db.run('invalid sql');
+      }).toThrowWithResultCode(SQLite3.ResultCode.error);
+    });
   });
 
   it('should pass JSLint', function () {
@@ -64,7 +83,13 @@
 
     this.addMatchers({
       toPassJsLint: function () {
-        if (JSLINT(this.actual, { white: true, nomen: true, predef: ['SQLite3', 'WinJS'] })) {
+        var options = {
+          white: true,
+          nomen: true,
+          bitwise: true,
+          predef: ['SQLite3', 'WinJS']
+        };
+        if (JSLINT(this.actual, options)) {
           return true;
         } else {
           var message = document.createElement('div');
