@@ -12,8 +12,8 @@
     return typeString.substring(8, typeString.length - 1).toLowerCase();
   }
 
-  Statement = WinJS.Class.define(function (statement, args) {
-    this.statement = statement;
+  Statement = WinJS.Class.define(function (db, sql, args) {
+    this.statement = db.connection.prepare(sql);
     if (args) {
       this.bind(args);
     }
@@ -80,23 +80,23 @@
   });
 
   Database = WinJS.Class.define(function (dbPath) {
-    this.db = SQLite3.Database(dbPath);
+    this.connection = SQLite3.Database(dbPath);
   }, {
     run: function (sql, args) {
-      var statement = new Statement(this.db.prepare(sql), args);
+      var statement = new Statement(this, sql, args);
 
       statement.run();
       statement.close();
     },
     all: function (sql, args) {
-      var rows, statement = new Statement(this.db.prepare(sql), args);
+      var rows, statement = new Statement(this, sql, args);
 
       rows = statement.all();
       statement.close();
       return rows;
     },
     close: function () {
-      this.db.close();
+      this.connection.close();
     }
 });
 
