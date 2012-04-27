@@ -68,4 +68,6 @@ SQLite in JavaScript applications.
 
 ## License
 
-???
+Copyright (c) 2012 doo GmbH
+
+Licensed under the MIT License, see LICENSE file.
