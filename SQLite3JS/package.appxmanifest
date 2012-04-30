@@ -4,7 +4,7 @@
   <Properties>
     <DisplayName>SQLite3JS</DisplayName>
     <Description>SQLite3JS</Description>
-    <PublisherDisplayName>guido</PublisherDisplayName>
+    <PublisherDisplayName>doo GmbH</PublisherDisplayName>
     <Logo>images\storelogo.png</Logo>
   </Properties>
   <Prerequisites>
