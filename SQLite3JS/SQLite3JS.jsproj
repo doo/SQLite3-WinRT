@@ -56,6 +56,7 @@
     <Content Include="images\smalllogo.png" />
     <Content Include="images\splashscreen.png" />
     <Content Include="images\storelogo.png" />
+    <Content Include="images\widelogo.png" />
     <Content Include="js\SQLite3.js" />
     <Content Include="lib\jasmine-1.1.0\jasmine-html.js" />
     <Content Include="lib\jasmine-1.1.0\jasmine.css" />
