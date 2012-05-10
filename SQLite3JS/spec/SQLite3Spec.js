@@ -51,6 +51,18 @@
     expect(rows[0].id).toEqual(null);
   });
 
+  it('should call a callback for each row', function () {
+    var calls, countCall = function () { calls += 1; };
+
+    calls = 0;
+    db.each('SELECT * FROM Item', countCall);
+    expect(calls).toEqual(3);
+
+    calls = 0;
+    db.each('SELECT * FROM Item WHERE price > ?', [2], countCall);
+    expect(calls).toEqual(2);
+  });
+
   describe('Error Handling', function () {
     beforeEach(function () {
       this.addMatchers({
