@@ -60,7 +60,15 @@
       this.statement.step();
     },
     all: function () {
-      var result = [], row, i, len, name;
+      var result = [];
+
+      this.each(function (row) {
+        result.push(row);
+      });
+      return result;
+    },
+    each: function (callback) {
+      var row, i, len, name;
 
       while (this.statement.step() === SQLite3.ResultCode.row) {
         row = {};
@@ -81,9 +89,8 @@
               break;
           }
         }
-        result.push(row);
+        callback(row);
       }
-      return result;
     },
     close: function () {
       this.statement.close();
@@ -109,6 +116,17 @@
       rows = statement.all();
       statement.close();
       return rows;
+    },
+    each: function (sql, args, callback) {
+      if (!callback && type(args) === 'function') {
+        callback = args;
+        args = null;
+      }
+
+      var statement = new Statement(this, sql, args);
+
+      statement.each(callback);
+      statement.close();
     },
     close: function () {
       this.connection.close();
