@@ -49,7 +49,7 @@
             resultCode = this.statement.bindNull(index);
             break;
           default:
-            throw new Error("Unsupported argument type.");
+            throw new Error("Unsupported argument type: " + type(arg));
         }
         if (resultCode !== SQLite3.ResultCode.ok) {
           throw new Error("Error " + resultCode + " when binding argument to SQL query.");
