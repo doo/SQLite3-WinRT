@@ -119,7 +119,7 @@
       var sourceUri = new Windows.Foundation.Uri('ms-appx:///js/SQLite3.js');
       Windows.Storage.StorageFile.getFileFromApplicationUriAsync(sourceUri).then(function (file) {
         Windows.Storage.FileIO.readTextAsync(file).then(function (string) {
-          source = string.substr(1); // Skip unicode byte order mark (BOM)
+          source = string;
         });
       });
     });
