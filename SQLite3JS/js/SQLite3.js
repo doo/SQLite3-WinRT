@@ -131,10 +131,10 @@
     close: function () {
       this.connection.close();
     }
-});
+  });
 
-WinJS.Namespace.define('SQLite3JS', {
-  Database: Database
-});
+  WinJS.Namespace.define('SQLite3JS', {
+    Database: Database
+  });
 
 }());
