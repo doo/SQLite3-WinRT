@@ -15,20 +15,19 @@
   });
 
   it('should return the correct count', function () {
-    var rows;
+    var row;
 
-    rows = db.all('SELECT COUNT(*) AS count FROM Item');
-    return expect(rows[0].count).toEqual(3);
+    row = db.one('SELECT COUNT(*) AS count FROM Item');
+    return expect(row.count).toEqual(3);
   });
 
   it('should return an item by id', function () {
-    var rows;
+    var row;
 
-    rows = db.all('SELECT * FROM Item WHERE id = ?', [2]);
-    expect(rows.length).toEqual(1);
-    expect(rows[0].name).toEqual('Orange');
-    expect(rows[0].price).toEqual(2.5);
-    expect(rows[0].id).toEqual(2);
+    row = db.one('SELECT * FROM Item WHERE id = ?', [2]);
+    expect(row.name).toEqual('Orange');
+    expect(row.price).toEqual(2.5);
+    expect(row.id).toEqual(2);
   });
 
   it('should return items with names ending on "e"', function () {
@@ -41,14 +40,13 @@
   });
 
   it('should allow binding null arguments', function () {
-    var rows, name = 'Mango';
+    var row, name = 'Mango';
 
     db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', [name, null, null]);
-    rows = db.all('SELECT * FROM Item WHERE name = ?', [name]);
-    expect(rows.length).toEqual(1);
-    expect(rows[0].name).toEqual(name);
-    expect(rows[0].price).toEqual(null);
-    expect(rows[0].id).toEqual(null);
+    row = db.one('SELECT * FROM Item WHERE name = ?', [name]);
+    expect(row.name).toEqual(name);
+    expect(row.price).toEqual(null);
+    expect(row.id).toEqual(null);
   });
 
   it('should call a callback for each row', function () {

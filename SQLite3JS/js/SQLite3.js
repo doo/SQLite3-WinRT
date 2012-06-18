@@ -59,6 +59,10 @@
     run: function () {
       this.statement.step();
     },
+    one: function () {
+      this.statement.step();
+      return this._getRow();
+    },
     all: function () {
       var result = [];
 
@@ -113,6 +117,13 @@
 
       statement.run();
       statement.close();
+    },
+    one: function (sql, args) {
+      var row, statement = this.prepare(sql, args);
+
+      row = statement.one();
+      statement.close();
+      return row;
     },
     all: function (sql, args) {
       var rows, statement = this.prepare(sql, args);
