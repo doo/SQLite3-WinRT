@@ -80,23 +80,24 @@
 
       for (i = 0, len = this.statement.columnCount() ; i < len; i += 1) {
         name = this.statement.columnName(i);
-        switch (this.statement.columnType(i)) {
-          case SQLite3.Datatype.integer:
-            row[name] = this.statement.columnInt(i);
-            break;
-          case SQLite3.Datatype.float:
-            row[name] = this.statement.columnDouble(i);
-            break;
-          case SQLite3.Datatype.text:
-            row[name] = this.statement.columnText(i);
-            break;
-          case SQLite3.Datatype["null"]:
-            row[name] = null;
-            break;
-        }
+        row[name] = this._getColumn(i);
       }
 
       return row;
+    },
+    _getColumn: function (index) {
+      switch (this.statement.columnType(index)) {
+        case SQLite3.Datatype.integer:
+          return this.statement.columnInt(index);
+        case SQLite3.Datatype.float:
+          return this.statement.columnDouble(index);
+        case SQLite3.Datatype.text:
+          return this.statement.columnText(index);
+        case SQLite3.Datatype["null"]:
+          return null;
+        default:
+          throw new Error('Unsupported column type.');
+      }
     }
   });
 
