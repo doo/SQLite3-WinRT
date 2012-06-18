@@ -1,4 +1,17 @@
 ﻿describe('SQLite3JS', function () {
+  function waitsForPromise (promise) {
+    var done = false;
+
+    promise.then(function () {
+      done = true;
+    }, function (error) {
+      currentJasmineSpec.fail(error);
+      done = true;
+    });
+
+    waitsFor(function () { return done; });
+  }
+  
   var db = null;
 
   beforeEach(function () {
@@ -100,8 +113,6 @@
   });
 
   it('should pass JSLint', function () {
-    var source = null;
-
     this.addMatchers({
       toPassJsLint: function () {
         var options = {
@@ -124,19 +135,16 @@
       }
     });
 
-    runs(function () {
-      var sourceUri = new Windows.Foundation.Uri('ms-appx:///js/SQLite3.js');
-      Windows.Storage.StorageFile.getFileFromApplicationUriAsync(sourceUri).then(function (file) {
-        Windows.Storage.FileIO.readTextAsync(file).then(function (string) {
-          source = string;
-        });
-      });
-    });
-    waitsFor(function () {
-      return source !== null;
-    });
-    runs(function () {
-      expect(source).toPassJsLint();
-    });
+    var sourceUri = new Windows.Foundation.Uri('ms-appx:///js/SQLite3.js');
+
+    waitsForPromise(
+      Windows.Storage.StorageFile.getFileFromApplicationUriAsync(sourceUri)
+        .then(function (file) {
+          return Windows.Storage.FileIO.readTextAsync(file)
+        })
+        .then(function (source) {
+          expect(source).toPassJsLint();
+        })
+    );
   });
 });
