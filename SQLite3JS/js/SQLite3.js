@@ -105,13 +105,13 @@
     }
   }, {
     run: function (sql, args) {
-      var statement = new Statement(this, sql, args);
+      var statement = this.prepare(sql, args);
 
       statement.run();
       statement.close();
     },
     all: function (sql, args) {
-      var rows, statement = new Statement(this, sql, args);
+      var rows, statement = this.prepare(sql, args);
 
       rows = statement.all();
       statement.close();
@@ -123,10 +123,13 @@
         args = null;
       }
 
-      var statement = new Statement(this, sql, args);
+      var statement = this.prepare(sql, args);
 
       statement.each(callback);
       statement.close();
+    },
+    prepare: function (sql, args) {
+      return new Statement(this, sql, args);
     },
     close: function () {
       this.connection.close();
