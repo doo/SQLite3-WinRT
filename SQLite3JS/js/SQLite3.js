@@ -1,7 +1,7 @@
 ﻿(function () {
   "use strict";
 
-  var Statement, Database;
+  var Statement, Database, ItemDataSource, GroupDataSource;
 
   // Alternative typeof implementation yielding more meaningful results,
   // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
@@ -166,10 +166,110 @@
     prepare: function (sql, args) {
       return new Statement(this, sql, args);
     },
+    itemDataSource: function (sql, args, keyColumnName, groupKeyColumnName) {
+      if (type(args) === 'string') {
+        groupKeyColumnName = keyColumnName;
+        keyColumnName = args;
+        args = undefined;
+      }
+
+      return new ItemDataSource(this, sql, args, keyColumnName, groupKeyColumnName);
+    },
+    groupDataSource: function (sql, args, keyColumnName, sizeColumnName) {
+      if (type(args) === 'string') {
+        sizeColumnName = keyColumnName;
+        keyColumnName = args;
+        args = undefined;
+      }
+
+      return new GroupDataSource(this, sql, args, keyColumnName, sizeColumnName);
+    },
     close: function () {
       this.connection.close();
     }
   });
+
+  ItemDataSource = WinJS.Class.derive(WinJS.UI.VirtualizedDataSource,
+    function (db, sql, args, keyColumnName, groupKeyColumnName) {
+      var dataAdapter = {
+        getCount: function () {
+          var row = db.one('SELECT COUNT(*) AS cnt FROM (' + sql + ')', args);
+          return WinJS.Promise.wrap(row.cnt);
+        },
+        itemsFromIndex: function (requestIndex, countBefore, countAfter) {
+          var items,
+              limit = countBefore + 1 + countAfter,
+              offset = requestIndex - countBefore;
+
+          items = db.map(
+            'SELECT * FROM (' + sql + ') LIMIT ' + limit + ' OFFSET ' + offset,
+            function (row) {
+              var item = {
+                key: row[keyColumnName].toString(),
+                data: row
+              };
+              if (groupKeyColumnName) {
+                item.groupKey = row[groupKeyColumnName].toString();
+              }
+              return item;
+            });
+
+          return WinJS.Promise.wrap({
+            items: items,
+            offset: countBefore,
+            atEnd: items.length < limit
+          });
+        }
+      };
+
+      this._baseDataSourceConstructor(dataAdapter);
+    }
+  );
+
+  GroupDataSource = WinJS.Class.derive(WinJS.UI.VirtualizedDataSource,
+    function (db, sql, args, keyColumnName, sizeColumnName) {
+      var groups,
+          dataAdapter,
+          keyIndexMap = {},
+          groupIndex = 0,
+          firstItemIndex = 0;
+
+      groups = db.map(sql, args, function (row) {
+        var item = {
+          key: row[keyColumnName].toString(),
+          groupSize: row[sizeColumnName],
+          firstItemIndexHint: firstItemIndex,
+          data: row
+        };
+
+        keyIndexMap[item.key] = groupIndex;
+        groupIndex += 1;
+        firstItemIndex += item.groupSize;
+
+        return item;
+      });
+
+      dataAdapter = {
+        getCount: function () {
+          return WinJS.Promise.wrap(groups.length);
+        },
+        itemsFromIndex: function (requestIndex, countBefore, countAfter) {
+          return WinJS.Promise.wrap({
+            items: groups.slice(),
+            offset: requestIndex,
+            absoluteIndex: requestIndex,
+            atStart: true,
+            atEnd: true
+          });
+        },
+        itemsFromKey: function (key, countBefore, countAfter) {
+          return this.itemsFromIndex(keyIndexMap[key], countBefore, countAfter);
+        }
+      };
+
+      this._baseDataSourceConstructor(dataAdapter);
+    }
+  );
 
   WinJS.Namespace.define('SQLite3JS', {
     Database: Database

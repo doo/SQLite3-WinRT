@@ -112,6 +112,66 @@
     });
   });
 
+  describe('Item Data Source', function () {
+    beforeEach(function () {
+      this.itemDataSource = db.itemDataSource('SELECT * FROM Item', 'id');
+    });
+
+    it('should support getCount()', function () {
+      waitsForPromise(
+        this.itemDataSource.getCount().then(function (count) {
+          expect(count).toEqual(3);
+        })
+      );
+    });
+
+    it('should support itemFromIndex()', function () {
+      waitsForPromise(
+        this.itemDataSource.itemFromIndex(1).then(function (item) {
+          expect(item.key).toEqual('2');
+          expect(item.data.name).toEqual('Orange');
+        })
+      );
+    });
+  });
+
+  describe('Group Data Source', function () {
+    beforeEach(function () {
+      this.groupDataSource = db.groupDataSource(
+        'SELECT LENGTH(name) AS key, COUNT(*) AS groupSize FROM Item GROUP BY key',
+        'key',
+        'groupSize');
+    });
+
+    it('should support getCount()', function () {
+      waitsForPromise(
+        this.groupDataSource.getCount().then(function (count) {
+          expect(count).toEqual(2);
+        })
+      );
+    });
+
+    it('should support itemFromIndex()', function () {
+      waitsForPromise(
+        this.groupDataSource.itemFromIndex(1).then(function (item) {
+          expect(item.key).toEqual('6');
+          expect(item.groupSize).toEqual(2);
+          expect(item.firstItemIndexHint).toEqual(1);
+        })
+      );
+    });
+
+    it('should support itemFromKey()', function () {
+      waitsForPromise(
+        this.groupDataSource.itemFromKey('5').then(function (item) {
+          expect(item.key).toEqual('5');
+          expect(item.groupSize).toEqual(1);
+          expect(item.firstItemIndexHint).toEqual(0);
+        })
+      );
+    });
+  });
+
   it('should pass JSLint', function () {
     this.addMatchers({
       toPassJsLint: function () {
