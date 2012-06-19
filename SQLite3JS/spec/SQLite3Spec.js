@@ -61,6 +61,17 @@
     expect(calls).toEqual(2);
   });
 
+  it('should map a function over all rows', function () {
+    var rating = db.map('SELECT * FROM Item', function (row) {
+      return row.price > 2 ? 'expensive' : 'cheap';
+    });
+
+    expect(rating.length).toEqual(3);
+    expect(rating[0]).toEqual('cheap');
+    expect(rating[1]).toEqual('expensive');
+    expect(rating[2]).toEqual('expensive');
+  });
+
   describe('Error Handling', function () {
     beforeEach(function () {
       this.addMatchers({

@@ -76,6 +76,14 @@
         callback(this._getRow());
       }
     },
+    map: function (callback) {
+      var result = [];
+
+      this.each(function (row) {
+        result.push(callback(row));
+      });
+      return result;
+    },
     close: function () {
       this.statement.close();
     },
@@ -142,6 +150,18 @@
 
       statement.each(callback);
       statement.close();
+    },
+    map: function (sql, args, callback) {
+      if (!callback && type(args) === 'function') {
+        callback = args;
+        args = null;
+      }
+
+      var rows, statement = this.prepare(sql, args);
+
+      rows = statement.map(callback);
+      statement.close();
+      return rows;
     },
     prepare: function (sql, args) {
       return new Statement(this, sql, args);
