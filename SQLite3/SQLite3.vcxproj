@@ -35,6 +35,7 @@
     <ClCompile Include="Statement.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Common.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Database.h" />
     <ClInclude Include="sqlite3.h" />

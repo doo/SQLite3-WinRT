@@ -18,12 +18,8 @@
     return error;
   }
 
-  Statement = WinJS.Class.define(function (db, sql, args) {
-    try {
-      this.statement = db.connection.prepare(sql);
-    } catch (comException) {
-      throw toSQLiteError(comException, 'Error preparing an SQLite statement.');
-    }
+  Statement = WinJS.Class.define(function (statement, args) {
+    this.statement = statement;
 
     if (args) {
       this.bind(args);
@@ -116,51 +112,56 @@
   Database = WinJS.Class.define(function (connection) {
     this.connection = connection;
   }, {
-    run: function (sql, args) {
-      var statement = this.prepare(sql, args);
-
-      statement.run();
-      statement.close();
+    runAsync: function (sql, args) {
+      return this.prepareAsync(sql, args).then(function (statement) {
+        statement.run();
+        statement.close();
+      });
     },
-    one: function (sql, args) {
-      var row, statement = this.prepare(sql, args);
-
-      row = statement.one();
-      statement.close();
-      return row;
+    oneAsync: function (sql, args) {
+      return this.prepareAsync(sql, args).then(function (statement) {
+        var row = statement.one();
+        statement.close();
+        return row;
+      });
     },
-    all: function (sql, args) {
-      var rows, statement = this.prepare(sql, args);
-
-      rows = statement.all();
-      statement.close();
-      return rows;
+    allAsync: function (sql, args) {
+      return this.prepareAsync(sql, args).then(function (statement) {
+        var rows = statement.all();
+        statement.close();
+        return rows;
+      });
     },
-    each: function (sql, args, callback) {
+    eachAsync: function (sql, args, callback) {
       if (!callback && type(args) === 'function') {
         callback = args;
         args = null;
       }
 
-      var statement = this.prepare(sql, args);
-
-      statement.each(callback);
-      statement.close();
+      return this.prepareAsync(sql, args).then(function (statement) {
+        statement.each(callback);
+        statement.close();
+      });
     },
-    map: function (sql, args, callback) {
+    mapAsync: function (sql, args, callback) {
       if (!callback && type(args) === 'function') {
         callback = args;
         args = null;
       }
 
-      var rows, statement = this.prepare(sql, args);
-
-      rows = statement.map(callback);
-      statement.close();
-      return rows;
+      return this.prepareAsync(sql, args).then(function (statement) {
+        var rows = statement.map(callback);
+        statement.close();
+        return rows;
+      });
     },
-    prepare: function (sql, args) {
-      return new Statement(this, sql, args);
+    prepareAsync: function (sql, args) {
+      return this.connection.prepareAsync(sql).then(function (statement) {
+        return new Statement(statement, args);
+      }, function (error) {
+        var sqliteError = toSQLiteError(error, 'Error preparing an SQLite statement.');
+        return WinJS.Promise.wrapError(sqliteError);
+      });
     },
     itemDataSource: function (sql, args, keyColumnName, groupKeyColumnName) {
       if (type(args) === 'string') {
@@ -189,15 +190,15 @@
     function (db, sql, args, keyColumnName, groupKeyColumnName) {
       var dataAdapter = {
         getCount: function () {
-          var row = db.one('SELECT COUNT(*) AS cnt FROM (' + sql + ')', args);
-          return WinJS.Promise.wrap(row.cnt);
+          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + sql + ')', args)
+            .then(function (row) { return row.cnt; });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
           var items,
               limit = countBefore + 1 + countAfter,
               offset = requestIndex - countBefore;
 
-          items = db.map(
+          return db.mapAsync(
             'SELECT * FROM (' + sql + ') LIMIT ' + limit + ' OFFSET ' + offset,
             function (row) {
               var item = {
@@ -208,13 +209,13 @@
                 item.groupKey = row[groupKeyColumnName].toString();
               }
               return item;
+            }).then(function (items) {
+              return {
+                items: items,
+                offset: countBefore,
+                atEnd: items.length < limit
+              };
             });
-
-          return WinJS.Promise.wrap({
-            items: items,
-            offset: countBefore,
-            atEnd: items.length < limit
-          });
         }
       };
 
@@ -224,42 +225,52 @@
 
   GroupDataSource = WinJS.Class.derive(WinJS.UI.VirtualizedDataSource,
     function (db, sql, args, keyColumnName, sizeColumnName) {
-      var groups,
-          dataAdapter,
-          keyIndexMap = {},
-          groupIndex = 0,
-          firstItemIndex = 0;
+      var dataAdapter = {
+        _keyIndexMap: {},
+        _ensureGroupsAsync: function () {
+          if (dataAdapter._groups) {
+            return WinJS.Promise.wrap();
+          }
 
-      groups = db.map(sql, args, function (row) {
-        var item = {
-          key: row[keyColumnName].toString(),
-          groupSize: row[sizeColumnName],
-          firstItemIndexHint: firstItemIndex,
-          data: row
-        };
+          var groupIndex = 0,
+              firstItemIndex = 0;
+          return db.mapAsync(sql, args, function (row) {
+            var item = {
+              key: row[keyColumnName].toString(),
+              groupSize: row[sizeColumnName],
+              firstItemIndexHint: firstItemIndex,
+              data: row
+            };
 
-        keyIndexMap[item.key] = groupIndex;
-        groupIndex += 1;
-        firstItemIndex += item.groupSize;
+            dataAdapter._keyIndexMap[item.key] = groupIndex;
+            groupIndex += 1;
+            firstItemIndex += item.groupSize;
 
-        return item;
-      });
-
-      dataAdapter = {
+            return item;
+          }).then(function(groups) {
+            dataAdapter._groups = groups;
+          });
+        },
         getCount: function () {
-          return WinJS.Promise.wrap(groups.length);
+          return dataAdapter._ensureGroupsAsync().then(function() {
+            return dataAdapter._groups.length;
+          });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
-          return WinJS.Promise.wrap({
-            items: groups.slice(),
-            offset: requestIndex,
-            absoluteIndex: requestIndex,
-            atStart: true,
-            atEnd: true
+          return dataAdapter._ensureGroupsAsync().then(function() {
+            return {
+              items: dataAdapter._groups.slice(),
+              offset: requestIndex,
+              absoluteIndex: requestIndex,
+              atStart: true,
+              atEnd: true
+            };
           });
         },
         itemsFromKey: function (key, countBefore, countAfter) {
-          return this.itemsFromIndex(keyIndexMap[key], countBefore, countAfter);
+          return dataAdapter._ensureGroupsAsync().then(function () {
+            return dataAdapter.itemsFromIndex(dataAdapter._keyIndexMap[key], countBefore, countAfter);
+          });
         }
       };
 

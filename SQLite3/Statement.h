@@ -1,13 +1,15 @@
 #pragma once
 
 #include "sqlite3.h"
+#include "Common.h"
 
 namespace SQLite3 {
   ref class Database;
 
   public ref class Statement sealed {
   public:
-    Statement(Database^ database, Platform::String^ sql);
+    static IAsyncOperation<Statement^>^ PrepareAsync(Database^ database, Platform::String^ sql);
+
     ~Statement();
 
     int Step();
@@ -26,6 +28,8 @@ namespace SQLite3 {
     int BindNull(int index);
 
   private:
+    Statement(sqlite3_stmt* statement);
+
     sqlite3_stmt* statement;
   };
 }

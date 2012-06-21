@@ -29,7 +29,7 @@ namespace SQLite3 {
     sqlite3_close(sqlite);
   }
 
-  Statement^ Database::Prepare(Platform::String^ sql) {
-    return ref new Statement(this, sql);
+  IAsyncOperation<Statement^>^ Database::PrepareAsync(Platform::String^ sql) {
+    return Statement::PrepareAsync(this, sql);
   }
 }

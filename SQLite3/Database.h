@@ -1,11 +1,10 @@
 #pragma once
 
 #include "sqlite3.h"
+#include "Common.h"
 
 namespace SQLite3 {
   ref class Statement;
-
-  using Windows::Foundation::IAsyncOperation;
 
   public ref class Database sealed {
   public:
@@ -13,7 +12,7 @@ namespace SQLite3 {
 
     ~Database();
 
-    Statement^ Prepare(Platform::String^ sql);
+    IAsyncOperation<Statement^>^ PrepareAsync(Platform::String^ sql);
 
   private:
     friend Statement;

@@ -17,5 +17,6 @@
     <ClInclude Include="Database.h" />
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="Statement.h" />
+    <ClInclude Include="Common.h" />
   </ItemGroup>
 </Project>

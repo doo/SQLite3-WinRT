@@ -1,18 +1,28 @@
-#include "Winerror.h"
+#include <ppltasks.h>
+#include <Winerror.h>
 
 #include "Statement.h"
 #include "Database.h"
 
 namespace SQLite3 {
-  Statement::Statement(Database^ database, Platform::String^ sql) {
-    int ret = sqlite3_prepare16(database->sqlite, sql->Data(), -1, &statement, 0);
+  IAsyncOperation<Statement^>^ Statement::PrepareAsync(Database^ database, Platform::String^ sql) {
+    return concurrency::create_async([database, sql]() {
+      sqlite3_stmt* statement;
+      int ret = sqlite3_prepare16(database->sqlite, sql->Data(), -1, &statement, 0);
 
-    if (ret != SQLITE_OK) {
-      sqlite3_finalize(statement);
+      if (ret != SQLITE_OK) {
+        sqlite3_finalize(statement);
 
-      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
-      throw ref new Platform::COMException(hresult);
-    }
+        HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
+        throw ref new Platform::COMException(hresult);
+      }
+
+      return ref new Statement(statement);
+    });
+  }
+
+  Statement::Statement(sqlite3_stmt* statement)
+    : statement(statement) {
   }
 
   Statement::~Statement() {
