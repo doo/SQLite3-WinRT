@@ -2,14 +2,12 @@
 
 #include "sqlite3.h"
 
-namespace SQLite3
-{
+namespace SQLite3 {
   ref class Statement;
 
   using Windows::Foundation::IAsyncOperation;
 
-  public ref class Database sealed
-  {
+  public ref class Database sealed {
   public:
     static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
 

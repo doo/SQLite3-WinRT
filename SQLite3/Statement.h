@@ -2,12 +2,10 @@
 
 #include "sqlite3.h"
 
-namespace SQLite3
-{
+namespace SQLite3 {
   ref class Database;
 
-  public ref class Statement sealed
-  {
+  public ref class Statement sealed {
   public:
     Statement(Database^ database, Platform::String^ sql);
     ~Statement();
