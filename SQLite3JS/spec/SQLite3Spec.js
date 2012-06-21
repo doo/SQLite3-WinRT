@@ -15,11 +15,15 @@
   var db = null;
 
   beforeEach(function () {
-    db = new SQLite3JS.Database(':memory:');
-    db.run('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
-    db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Apple', 1.2, 1]);
-    db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Orange', 2.5, 2]);
-    db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Banana', 3, 3]);
+    waitsForPromise(
+      SQLite3JS.openAsync(':memory:').then(function (newDb) {
+        db = newDb;
+        db.run('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
+        db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Apple', 1.2, 1]);
+        db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Orange', 2.5, 2]);
+        db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Banana', 3, 3]);
+      })
+    );
   });
 
   afterEach(function () {
@@ -100,9 +104,14 @@
     });
 
     it('should throw when creating an invalid database', function () {
-      expect(function () {
-        new SQLite3JS.Database('invalid path');
-      }).toThrowWithResultCode(SQLite3.ResultCode.cantOpen);
+      waitsForPromise(
+        SQLite3JS.openAsync('invalid path').then(function (db) {
+          // The complete callback isn't supposed to be called.
+          expect(false).toBe(true);
+        }, function (error) {
+          expect(error.resultCode).toEqual(SQLite3.ResultCode.cantOpen);
+        })
+      );
     });
 
     it('should throw when executing an invalid statement', function () {

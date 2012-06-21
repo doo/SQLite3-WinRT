@@ -12,17 +12,17 @@
     return typeString.substring(8, typeString.length - 1).toLowerCase();
   }
 
-  function throwSQLiteError(message, comException) {
+  function toSQLiteError(comException, message) {
     var error = new Error(message);
     error.resultCode = comException.number & 0xffff;
-    throw error;
+    return error;
   }
 
   Statement = WinJS.Class.define(function (db, sql, args) {
     try {
       this.statement = db.connection.prepare(sql);
     } catch (comException) {
-      throwSQLiteError('Error preparing an SQLite statement.', comException);
+      throw toSQLiteError(comException, 'Error preparing an SQLite statement.');
     }
 
     if (args) {
@@ -113,12 +113,8 @@
     }
   });
 
-  Database = WinJS.Class.define(function (dbPath) {
-    try {
-      this.connection = SQLite3.Database(dbPath);
-    } catch (comException) {
-      throwSQLiteError('Error creating an SQLite database connection.', comException);
-    }
+  Database = WinJS.Class.define(function (connection) {
+    this.connection = connection;
   }, {
     run: function (sql, args) {
       var statement = this.prepare(sql, args);
@@ -271,8 +267,17 @@
     }
   );
 
+  function openAsync(dbPath) {
+    return SQLite3.Database.openAsync(dbPath).then(function (connection) {
+      return new Database(connection);
+    }, function (error) {
+      var sqliteError = toSQLiteError(error, 'Error creating an SQLite database connection.');
+      return WinJS.Promise.wrapError(sqliteError);
+    });
+  }
+
   WinJS.Namespace.define('SQLite3JS', {
-    Database: Database
+    openAsync: openAsync
   });
 
 }());
