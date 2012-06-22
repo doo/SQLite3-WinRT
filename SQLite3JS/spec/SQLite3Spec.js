@@ -67,7 +67,7 @@
     );
   });
 
-  xit('should allow binding null arguments', function () {
+  it('should allow binding null arguments', function () {
     var name = 'Mango';
 
     waitsForPromise(

@@ -32,14 +32,17 @@ namespace SQLite3 {
     int index = 1;
 
     std::for_each(std::begin(params), std::end(params), [&](Platform::Object^ param) {
-      int ret = SQLITE_ERROR;
-      switch (Platform::Type::GetTypeCode(param->GetType())) {
-      case Platform::TypeCode::Double:
-        ret = sqlite3_bind_double(statement, index, static_cast<double>(param));
-        break;
-      case Platform::TypeCode::String:
-        ret = sqlite3_bind_text16(statement, index, static_cast<Platform::String^>(param)->Data(), -1, SQLITE_TRANSIENT);
-        break;
+      if (param == nullptr) {
+        sqlite3_bind_null(statement, index);
+      } else {
+        switch (Platform::Type::GetTypeCode(param->GetType())) {
+        case Platform::TypeCode::Double:
+          sqlite3_bind_double(statement, index, static_cast<double>(param));
+          break;
+        case Platform::TypeCode::String:
+          sqlite3_bind_text16(statement, index, static_cast<Platform::String^>(param)->Data(), -1, SQLITE_TRANSIENT);
+          break;
+        }
       }
 
       ++index;
