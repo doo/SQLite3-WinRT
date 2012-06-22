@@ -4,13 +4,20 @@
 #include "Common.h"
 
 namespace SQLite3 {
-  ref class Database;
-
-  public ref class Statement sealed {
+  class Statement {
   public:
-    static IAsyncOperation<Statement^>^ PrepareAsync(Database^ database, Platform::String^ sql);
-
+    static StatementPtr Prepare(sqlite3* sqlite, Platform::String^ sql);
     ~Statement();
+
+    void Bind(Parameters^ params);
+    void Run();
+    Row^ One();
+
+  private:
+    Statement(sqlite3_stmt* statement);
+
+    Row^ GetRow();
+    Platform::Object^ GetColumn(int index);
 
     int Step();
 
@@ -28,8 +35,6 @@ namespace SQLite3 {
     int BindNull(int index);
 
   private:
-    Statement(sqlite3_stmt* statement);
-
     sqlite3_stmt* statement;
   };
 }

@@ -113,16 +113,16 @@
     this.connection = connection;
   }, {
     runAsync: function (sql, args) {
-      return this.prepareAsync(sql, args).then(function (statement) {
-        statement.run();
-        statement.close();
+      return this.connection.runAsync(sql, args).then(function () {
+      }, function (error) {
+        return WinJS.Promise.wrapError(toSQLiteError(error));
       });
     },
     oneAsync: function (sql, args) {
-      return this.prepareAsync(sql, args).then(function (statement) {
-        var row = statement.one();
-        statement.close();
+      return this.connection.oneAsync(sql, args).then(function (row) {
         return row;
+      }, function (error) {
+        return WinJS.Promise.wrapError(toSQLiteError(error));
       });
     },
     allAsync: function (sql, args) {

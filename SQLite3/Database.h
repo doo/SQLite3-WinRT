@@ -4,20 +4,17 @@
 #include "Common.h"
 
 namespace SQLite3 {
-  ref class Statement;
-
   public ref class Database sealed {
   public:
     static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
-
     ~Database();
 
-    IAsyncOperation<Statement^>^ PrepareAsync(Platform::String^ sql);
+    IAsyncAction^ RunAsync(Platform::String^ sql, Parameters^ params);
+    IAsyncOperation<Row^>^ OneAsync(Platform::String^ sql, Parameters^ params);
 
   private:
-    friend Statement;
-
     Database(sqlite3* sqlite);
+    StatementPtr PrepareAndBind(Platform::String^ sql, Parameters^ params);
 
     sqlite3* sqlite;
   };

@@ -6,7 +6,7 @@
 
 namespace SQLite3 {
   IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
-    return concurrency::create_async([dbPath]() {
+    return concurrency::create_async([=]() {
       sqlite3* sqlite;
       int ret = sqlite3_open16(dbPath->Data(), &sqlite);
 
@@ -29,7 +29,27 @@ namespace SQLite3 {
     sqlite3_close(sqlite);
   }
 
-  IAsyncOperation<Statement^>^ Database::PrepareAsync(Platform::String^ sql) {
-    return Statement::PrepareAsync(this, sql);
+  IAsyncAction^ Database::RunAsync(Platform::String^ sql, Parameters^ params) {
+    return concurrency::create_async([=]() {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      statement->Run();
+    });
+  }
+
+  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, Parameters^ params) {
+    return concurrency::create_async([=]() {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->One();
+    });
+  }
+
+  StatementPtr Database::PrepareAndBind(Platform::String^ sql, Parameters^ params) {
+    StatementPtr statement = Statement::Prepare(sqlite, sql);
+
+    if (params) {
+      statement->Bind(params);
+    }
+
+    return statement;
   }
 }
