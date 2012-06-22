@@ -56,7 +56,7 @@
     );
   });
 
-  it('should return items with names ending on "e"', function () {
+  xit('should return items with names ending on "e"', function () {
     waitsForPromise(
       db.allAsync('SELECT * FROM Item WHERE name LIKE ? ORDER BY id ASC', ['%e'])
         .then(function (rows) {
@@ -67,7 +67,7 @@
     );
   });
 
-  it('should allow binding null arguments', function () {
+  xit('should allow binding null arguments', function () {
     var name = 'Mango';
 
     waitsForPromise(
@@ -83,7 +83,7 @@
     );
   });
 
-  it('should call a callback for each row', function () {
+  xit('should call a callback for each row', function () {
     var calls = 0,
         countCall = function () { calls += 1; };
 
@@ -100,7 +100,7 @@
     );
   });
 
-  it('should map a function over all rows', function () {
+  xit('should map a function over all rows', function () {
     waitsForPromise(
       db.mapAsync('SELECT * FROM Item', function (row) {
         return row.price > 2 ? 'expensive' : 'cheap';
@@ -137,7 +137,7 @@
     });
   });
 
-  describe('Item Data Source', function () {
+  xdescribe('Item Data Source', function () {
     beforeEach(function () {
       this.itemDataSource = db.itemDataSource('SELECT * FROM Item', 'id');
     });
@@ -160,7 +160,7 @@
     });
   });
 
-  describe('Group Data Source', function () {
+  xdescribe('Group Data Source', function () {
     beforeEach(function () {
       this.groupDataSource = db.groupDataSource(
         'SELECT LENGTH(name) AS key, COUNT(*) AS groupSize FROM Item GROUP BY key',
