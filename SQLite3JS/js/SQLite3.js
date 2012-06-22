@@ -126,10 +126,10 @@
       });
     },
     allAsync: function (sql, args) {
-      return this.prepareAsync(sql, args).then(function (statement) {
-        var rows = statement.all();
-        statement.close();
+      return this.connection.allAsync(sql, args).then(function (rows) {
         return rows;
+      }, function (error) {
+        return WinJS.Promise.wrapError(toSQLiteError(error));
       });
     },
     eachAsync: function (sql, args, callback) {

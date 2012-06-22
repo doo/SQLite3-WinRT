@@ -43,6 +43,13 @@ namespace SQLite3 {
     });
   }
 
+  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, Parameters^ params) {
+    return concurrency::create_async([=]() {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->All();
+    });
+  }
+
   StatementPtr Database::PrepareAndBind(Platform::String^ sql, Parameters^ params) {
     StatementPtr statement = Statement::Prepare(sqlite, sql);
 

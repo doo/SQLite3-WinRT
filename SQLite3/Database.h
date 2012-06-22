@@ -11,6 +11,7 @@ namespace SQLite3 {
 
     IAsyncAction^ RunAsync(Platform::String^ sql, Parameters^ params);
     IAsyncOperation<Row^>^ OneAsync(Platform::String^ sql, Parameters^ params);
+    IAsyncOperation<Rows^>^ AllAsync(Platform::String^ sql, Parameters^ params);
 
   private:
     Database(sqlite3* sqlite);

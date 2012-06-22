@@ -1,3 +1,4 @@
+#include <collection.h>
 #include <ppltasks.h>
 #include <Winerror.h>
 
@@ -66,8 +67,18 @@ namespace SQLite3 {
     }
   }
 
+  Rows^ Statement::All() {
+    auto rows = ref new Platform::Collections::Vector<Row^>();
+
+    while (Step() == SQLITE_ROW) {
+      rows->Append(GetRow());
+    }
+
+    return rows->GetView();
+  }
+
   Row^ Statement::GetRow() {
-    Row^ row = ref new Row();
+    auto row = ref new Platform::Collections::Map<Platform::String^, Platform::Object^>();
 
     int columnCount = ColumnCount();
     for (int i = 0 ; i < columnCount; ++i) {
@@ -75,7 +86,7 @@ namespace SQLite3 {
       row->Insert(name, GetColumn(i));
     }
 
-    return row;
+    return row->GetView();
   }
 
   Platform::Object^ Statement::GetColumn(int index) {

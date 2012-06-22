@@ -56,7 +56,7 @@
     );
   });
 
-  xit('should return items with names ending on "e"', function () {
+  it('should return items with names ending on "e"', function () {
     waitsForPromise(
       db.allAsync('SELECT * FROM Item WHERE name LIKE ? ORDER BY id ASC', ['%e'])
         .then(function (rows) {

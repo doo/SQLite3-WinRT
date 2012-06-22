@@ -12,6 +12,7 @@ namespace SQLite3 {
     void Bind(Parameters^ params);
     void Run();
     Row^ One();
+    Rows^ All();
 
   private:
     Statement(sqlite3_stmt* statement);
