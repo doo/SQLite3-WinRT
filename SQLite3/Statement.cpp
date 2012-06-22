@@ -79,6 +79,18 @@ namespace SQLite3 {
     return rows->GetView();
   }
 
+  void Statement::Each(EachCallback^ callback, Windows::UI::Core::CoreDispatcher^ dispatcher) {
+    auto callbackDelegate = ref new Windows::UI::Core::DispatchedHandler([=]() {
+      callback(GetRow());
+    });
+
+    while (Step() == SQLITE_ROW) {
+      auto callbackTask = concurrency::create_task(
+        dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, callbackDelegate));
+      callbackTask.get();
+    }
+  }
+
   Row^ Statement::GetRow() {
     auto row = ref new Platform::Collections::Map<Platform::String^, Platform::Object^>();
 

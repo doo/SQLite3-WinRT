@@ -138,9 +138,9 @@
         args = null;
       }
 
-      return this.prepareAsync(sql, args).then(function (statement) {
-        statement.each(callback);
-        statement.close();
+      return this.connection.eachAsync(sql, args, callback).then(function () {
+      }, function (error) {
+        return WinJS.Promise.wrapError(toSQLiteError(error));
       });
     },
     mapAsync: function (sql, args, callback) {

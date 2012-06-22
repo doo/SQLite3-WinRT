@@ -83,7 +83,7 @@
     );
   });
 
-  xit('should call a callback for each row', function () {
+  it('should call a callback for each row', function () {
     var calls = 0,
         countCall = function () { calls += 1; };
 

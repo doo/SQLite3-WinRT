@@ -13,6 +13,7 @@ namespace SQLite3 {
     void Run();
     Row^ One();
     Rows^ All();
+    void Each(EachCallback^ callback, Windows::UI::Core::CoreDispatcher^ dispatcher);
 
   private:
     Statement(sqlite3_stmt* statement);

@@ -67,9 +67,21 @@ namespace SQLite3 {
     });
   }
 
+  IAsyncAction^ Database::EachAsync(Platform::String^ sql, Parameters^ params, EachCallback^ callback) {
+    auto safeParams = copyParameters(params);
+
+    auto window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
+    auto dispatcher = window->Dispatcher;
+
+    return concurrency::create_async([=]() {
+      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      return statement->Each(callback, dispatcher);
+    });
+  }
+
   StatementPtr Database::PrepareAndBind(Platform::String^ sql, const SafeParameters& params) {
-      StatementPtr statement = Statement::Prepare(sqlite, sql);
-      statement->Bind(params);
-      return statement;
+    StatementPtr statement = Statement::Prepare(sqlite, sql);
+    statement->Bind(params);
+    return statement;
   }
 }
