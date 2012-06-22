@@ -1,3 +1,4 @@
+#include <collection.h>
 #include <ppltasks.h>
 #include <Winerror.h>
 
@@ -5,6 +6,16 @@
 #include "Statement.h"
 
 namespace SQLite3 {
+  static SafeParameters copyParameters(Parameters^ params) {
+    SafeParameters paramsCopy;
+
+    if (params) {
+      std::copy(begin(params), end(params), std::back_inserter(paramsCopy));
+    }
+
+    return paramsCopy;
+  }
+
   IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
     return concurrency::create_async([=]() {
       sqlite3* sqlite;
@@ -30,33 +41,35 @@ namespace SQLite3 {
   }
 
   IAsyncAction^ Database::RunAsync(Platform::String^ sql, Parameters^ params) {
+    auto safeParams = copyParameters(params);
+
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, params);
+      StatementPtr statement = PrepareAndBind(sql, safeParams);
       statement->Run();
     });
   }
 
   IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, Parameters^ params) {
+    auto safeParams = copyParameters(params);
+
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, params);
+      StatementPtr statement = PrepareAndBind(sql, safeParams);
       return statement->One();
     });
   }
 
   IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, Parameters^ params) {
+    auto safeParams = copyParameters(params);
+
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, params);
+      StatementPtr statement = PrepareAndBind(sql, safeParams);
       return statement->All();
     });
   }
 
-  StatementPtr Database::PrepareAndBind(Platform::String^ sql, Parameters^ params) {
-    StatementPtr statement = Statement::Prepare(sqlite, sql);
-
-    if (params) {
+  StatementPtr Database::PrepareAndBind(Platform::String^ sql, const SafeParameters& params) {
+      StatementPtr statement = Statement::Prepare(sqlite, sql);
       statement->Bind(params);
-    }
-
-    return statement;
+      return statement;
   }
 }

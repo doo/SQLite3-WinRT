@@ -15,7 +15,7 @@ namespace SQLite3 {
 
   private:
     Database(sqlite3* sqlite);
-    StatementPtr PrepareAndBind(Platform::String^ sql, Parameters^ params);
+    StatementPtr PrepareAndBind(Platform::String^ sql, const SafeParameters& params);
 
     sqlite3* sqlite;
   };

@@ -28,11 +28,10 @@ namespace SQLite3 {
     sqlite3_finalize(statement);
   }
 
-  void Statement::Bind(Parameters^ params) {
-    auto iter = params->First();
+  void Statement::Bind(const SafeParameters& params) {
     int index = 1;
-    do {
-      auto param = iter->Current;
+
+    std::for_each(std::begin(params), std::end(params), [&](Platform::Object^ param) {
       int ret = SQLITE_ERROR;
       switch (Platform::Type::GetTypeCode(param->GetType())) {
       case Platform::TypeCode::Double:
@@ -44,7 +43,7 @@ namespace SQLite3 {
       }
 
       ++index;
-    } while (iter->MoveNext());
+    });
   }
 
   void Statement::Run() {

@@ -5,8 +5,9 @@ namespace SQLite3 {
   class Statement;
   typedef std::unique_ptr<Statement> StatementPtr;
 
-  typedef Windows::Foundation::Collections::IKeyValuePair<Platform::String^, Platform::Object^> Parameter;
   typedef Windows::Foundation::Collections::IVectorView<Platform::Object^> Parameters;
+  typedef std::vector<Platform::Object^> SafeParameters;
+
   typedef Windows::Foundation::Collections::IMapView<Platform::String^, Platform::Object^> Row;
   typedef Windows::Foundation::Collections::IVectorView<Row^> Rows;
 
