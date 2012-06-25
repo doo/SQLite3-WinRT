@@ -149,10 +149,12 @@
         args = null;
       }
 
-      return this.prepareAsync(sql, args).then(function (statement) {
-        var rows = statement.map(callback);
-        statement.close();
-        return rows;
+      var results = [];
+
+      return this.eachAsync(sql, args, function (row) {
+        results.push(callback(row));
+      }).then(function () {
+        return results;
       });
     },
     prepareAsync: function (sql, args) {

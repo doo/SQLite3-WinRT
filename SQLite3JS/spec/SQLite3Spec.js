@@ -100,7 +100,7 @@
     );
   });
 
-  xit('should map a function over all rows', function () {
+  it('should map a function over all rows', function () {
     waitsForPromise(
       db.mapAsync('SELECT * FROM Item', function (row) {
         return row.price > 2 ? 'expensive' : 'cheap';
