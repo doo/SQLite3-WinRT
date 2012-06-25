@@ -3,10 +3,11 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
-  function toSQLiteError(comException, message) {
-    var error = new Error(message);
-    error.resultCode = comException.number & 0xffff;
-    return error;
+  function wrapComException(comException) {
+    return WinJS.Promise.wrapError({
+      message: 'SQLite Error',
+      resultCode: comException.number & 0xffff
+    });
   }
 
   Database = WinJS.Class.define(function (connection) {
@@ -14,23 +15,17 @@
   }, {
     runAsync: function (sql, args) {
       return this.connection.runAsync(sql, args).then(function () {
-      }, function (error) {
-        return WinJS.Promise.wrapError(toSQLiteError(error));
-      });
+      }, wrapComException);
     },
     oneAsync: function (sql, args) {
       return this.connection.oneAsync(sql, args).then(function (row) {
         return row;
-      }, function (error) {
-        return WinJS.Promise.wrapError(toSQLiteError(error));
-      });
+      }, wrapComException);
     },
     allAsync: function (sql, args) {
       return this.connection.allAsync(sql, args).then(function (rows) {
         return rows;
-      }, function (error) {
-        return WinJS.Promise.wrapError(toSQLiteError(error));
-      });
+      }, wrapComException);
     },
     eachAsync: function (sql, args, callback) {
       if (!callback && typeof args === 'function') {
@@ -39,9 +34,7 @@
       }
 
       return this.connection.eachAsync(sql, args, callback).then(function () {
-      }, function (error) {
-        return WinJS.Promise.wrapError(toSQLiteError(error));
-      });
+      }, wrapComException);
     },
     mapAsync: function (sql, args, callback) {
       if (!callback && typeof args === 'function') {
@@ -175,10 +168,7 @@
   function openAsync(dbPath) {
     return SQLite3.Database.openAsync(dbPath).then(function (connection) {
       return new Database(connection);
-    }, function (error) {
-      var sqliteError = toSQLiteError(error, 'Error creating an SQLite database connection.');
-      return WinJS.Promise.wrapError(sqliteError);
-    });
+    }, wrapComException);
   }
 
   WinJS.Namespace.define('SQLite3JS', {
