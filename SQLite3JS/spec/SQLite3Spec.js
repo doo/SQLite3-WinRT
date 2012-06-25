@@ -127,7 +127,7 @@
   describe('mapAsync()', function () {
     it('should map a function over all rows', function () {
       waitsForPromise(
-        db.mapAsync('SELECT * FROM Item', function (row) {
+        db.mapAsync('SELECT * FROM Item ORDER BY id', function (row) {
           return row.price > 2 ? 'expensive' : 'cheap';
         }).then(function (rating) {
           expect(rating.length).toEqual(3);
@@ -165,7 +165,7 @@
 
   describe('Item Data Source', function () {
     beforeEach(function () {
-      this.itemDataSource = db.itemDataSource('SELECT * FROM Item', 'id');
+      this.itemDataSource = db.itemDataSource('SELECT * FROM Item ORDER BY id', 'id');
     });
 
     it('should support getCount()', function () {
