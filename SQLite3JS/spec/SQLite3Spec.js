@@ -1,4 +1,17 @@
 ﻿describe('SQLite3JS', function () {
+  function waitsForPromise (promise) {
+    var done = false;
+
+    promise.then(function () {
+      done = true;
+    }, function (error) {
+      currentJasmineSpec.fail(error);
+      done = true;
+    });
+
+    waitsFor(function () { return done; });
+  }
+  
   var db = null;
 
   beforeEach(function () {
@@ -15,20 +28,19 @@
   });
 
   it('should return the correct count', function () {
-    var rows;
+    var row;
 
-    rows = db.all('SELECT COUNT(*) AS count FROM Item');
-    return expect(rows[0].count).toEqual(3);
+    row = db.one('SELECT COUNT(*) AS count FROM Item');
+    return expect(row.count).toEqual(3);
   });
 
   it('should return an item by id', function () {
-    var rows;
+    var row;
 
-    rows = db.all('SELECT * FROM Item WHERE id = ?', [2]);
-    expect(rows.length).toEqual(1);
-    expect(rows[0].name).toEqual('Orange');
-    expect(rows[0].price).toEqual(2.5);
-    expect(rows[0].id).toEqual(2);
+    row = db.one('SELECT * FROM Item WHERE id = ?', [2]);
+    expect(row.name).toEqual('Orange');
+    expect(row.price).toEqual(2.5);
+    expect(row.id).toEqual(2);
   });
 
   it('should return items with names ending on "e"', function () {
@@ -41,14 +53,13 @@
   });
 
   it('should allow binding null arguments', function () {
-    var rows, name = 'Mango';
+    var row, name = 'Mango';
 
     db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', [name, null, null]);
-    rows = db.all('SELECT * FROM Item WHERE name = ?', [name]);
-    expect(rows.length).toEqual(1);
-    expect(rows[0].name).toEqual(name);
-    expect(rows[0].price).toEqual(null);
-    expect(rows[0].id).toEqual(null);
+    row = db.one('SELECT * FROM Item WHERE name = ?', [name]);
+    expect(row.name).toEqual(name);
+    expect(row.price).toEqual(null);
+    expect(row.id).toEqual(null);
   });
 
   it('should call a callback for each row', function () {
@@ -61,6 +72,17 @@
     calls = 0;
     db.each('SELECT * FROM Item WHERE price > ?', [2], countCall);
     expect(calls).toEqual(2);
+  });
+
+  it('should map a function over all rows', function () {
+    var rating = db.map('SELECT * FROM Item', function (row) {
+      return row.price > 2 ? 'expensive' : 'cheap';
+    });
+
+    expect(rating.length).toEqual(3);
+    expect(rating[0]).toEqual('cheap');
+    expect(rating[1]).toEqual('expensive');
+    expect(rating[2]).toEqual('expensive');
   });
 
   describe('Error Handling', function () {
@@ -90,9 +112,67 @@
     });
   });
 
-  it('should pass JSLint', function () {
-    var source = null;
+  describe('Item Data Source', function () {
+    beforeEach(function () {
+      this.itemDataSource = db.itemDataSource('SELECT * FROM Item', 'id');
+    });
 
+    it('should support getCount()', function () {
+      waitsForPromise(
+        this.itemDataSource.getCount().then(function (count) {
+          expect(count).toEqual(3);
+        })
+      );
+    });
+
+    it('should support itemFromIndex()', function () {
+      waitsForPromise(
+        this.itemDataSource.itemFromIndex(1).then(function (item) {
+          expect(item.key).toEqual('2');
+          expect(item.data.name).toEqual('Orange');
+        })
+      );
+    });
+  });
+
+  describe('Group Data Source', function () {
+    beforeEach(function () {
+      this.groupDataSource = db.groupDataSource(
+        'SELECT LENGTH(name) AS key, COUNT(*) AS groupSize FROM Item GROUP BY key',
+        'key',
+        'groupSize');
+    });
+
+    it('should support getCount()', function () {
+      waitsForPromise(
+        this.groupDataSource.getCount().then(function (count) {
+          expect(count).toEqual(2);
+        })
+      );
+    });
+
+    it('should support itemFromIndex()', function () {
+      waitsForPromise(
+        this.groupDataSource.itemFromIndex(1).then(function (item) {
+          expect(item.key).toEqual('6');
+          expect(item.groupSize).toEqual(2);
+          expect(item.firstItemIndexHint).toEqual(1);
+        })
+      );
+    });
+
+    it('should support itemFromKey()', function () {
+      waitsForPromise(
+        this.groupDataSource.itemFromKey('5').then(function (item) {
+          expect(item.key).toEqual('5');
+          expect(item.groupSize).toEqual(1);
+          expect(item.firstItemIndexHint).toEqual(0);
+        })
+      );
+    });
+  });
+
+  it('should pass JSLint', function () {
     this.addMatchers({
       toPassJsLint: function () {
         var options = {
@@ -115,19 +195,16 @@
       }
     });
 
-    runs(function () {
-      var sourceUri = new Windows.Foundation.Uri('ms-appx:///js/SQLite3.js');
-      Windows.Storage.StorageFile.getFileFromApplicationUriAsync(sourceUri).then(function (file) {
-        Windows.Storage.FileIO.readTextAsync(file).then(function (string) {
-          source = string;
-        });
-      });
-    });
-    waitsFor(function () {
-      return source !== null;
-    });
-    runs(function () {
-      expect(source).toPassJsLint();
-    });
+    var sourceUri = new Windows.Foundation.Uri('ms-appx:///js/SQLite3.js');
+
+    waitsForPromise(
+      Windows.Storage.StorageFile.getFileFromApplicationUriAsync(sourceUri)
+        .then(function (file) {
+          return Windows.Storage.FileIO.readTextAsync(file)
+        })
+        .then(function (source) {
+          expect(source).toPassJsLint();
+        })
+    );
   });
 });
