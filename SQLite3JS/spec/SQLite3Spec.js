@@ -95,6 +95,14 @@
           })
       );
     });
+
+    it('should return empty array for empty queries', function () {
+      waitsForPromise(
+        db.allAsync('SELECT * FROM Item WHERE id < 0').then(function (rows) {
+          expect(rows.length).toEqual(0);
+        })
+      );
+    });
   });
 
   describe('eachAsync()', function () {
