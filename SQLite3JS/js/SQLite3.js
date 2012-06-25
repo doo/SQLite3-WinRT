@@ -108,7 +108,7 @@
         case SQLite3.Datatype["null"]:
           return null;
         default:
-          throw new Error('Unsupported column type.');
+          throw new Error('Unsupported column type in column ' + index);
       }
     }
   });
