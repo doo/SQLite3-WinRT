@@ -137,7 +137,7 @@
     });
   });
 
-  xdescribe('Item Data Source', function () {
+  describe('Item Data Source', function () {
     beforeEach(function () {
       this.itemDataSource = db.itemDataSource('SELECT * FROM Item', 'id');
     });
@@ -160,7 +160,7 @@
     });
   });
 
-  xdescribe('Group Data Source', function () {
+  describe('Group Data Source', function () {
     beforeEach(function () {
       this.groupDataSource = db.groupDataSource(
         'SELECT LENGTH(name) AS key, COUNT(*) AS groupSize FROM Item GROUP BY key',
