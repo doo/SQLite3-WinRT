@@ -38,36 +38,43 @@
     );
   });
 
-  it('should return the correct count', function () {
-    waitsForPromise(
-      db.oneAsync('SELECT COUNT(*) AS count FROM Item').then(function (row) {
-        expect(row.count).toEqual(3);
-      })
-    );
-  });
+  describe('runAsync()', function () {
+    it('should allow binding null arguments', function () {
+      var name = 'Mango';
 
-  it('should return an item by id', function () {
-    waitsForPromise(
-      db.oneAsync('SELECT * FROM Item WHERE id = ?', [2]).then(function (row) {
-        expect(row.name).toEqual('Orange');
-        expect(row.price).toEqual(2.5);
-        expect(row.id).toEqual(2);
-      })
-    );
-  });
-
-  it('should return items with names ending on "e"', function () {
-    waitsForPromise(
-      db.allAsync('SELECT * FROM Item WHERE name LIKE ? ORDER BY id ASC', ['%e'])
-        .then(function (rows) {
-          expect(rows.length).toEqual(2);
-          expect(rows[0].name).toEqual('Apple');
-          expect(rows[1].name).toEqual('Orange');
-        })
-    );
+      waitsForPromise(
+        db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', [name, null, null])
+          .then(function () {
+            return db.oneAsync('SELECT * FROM Item WHERE name = ?', [name]);
+          })
+          .then(function (row) {
+            expect(row.name).toEqual(name);
+            expect(row.price).toEqual(null);
+            expect(row.id).toEqual(null);
+          })
+      );
+    });
   });
 
   describe('oneAsync()', function () {
+    it('should return the correct count', function () {
+      waitsForPromise(
+        db.oneAsync('SELECT COUNT(*) AS count FROM Item').then(function (row) {
+          expect(row.count).toEqual(3);
+        })
+      );
+    });
+
+    it('should return an item by id', function () {
+      waitsForPromise(
+        db.oneAsync('SELECT * FROM Item WHERE id = ?', [2]).then(function (row) {
+          expect(row.name).toEqual('Orange');
+          expect(row.price).toEqual(2.5);
+          expect(row.id).toEqual(2);
+        })
+      );
+    });
+
     it('should return null for empty queries', function () {
       waitsForPromise(
         db.oneAsync('SELECT * FROM Item WHERE name = ?', ['BEEF']).then(function (row) {
@@ -77,50 +84,51 @@
     });
   });
 
-  it('should allow binding null arguments', function () {
-    var name = 'Mango';
-
-    waitsForPromise(
-      db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', [name, null, null])
-        .then(function () {
-          return db.oneAsync('SELECT * FROM Item WHERE name = ?', [name]);
-        })
-        .then(function (row) {
-          expect(row.name).toEqual(name);
-          expect(row.price).toEqual(null);
-          expect(row.id).toEqual(null);
-        })
-    );
+  describe('allAsync()', function () {
+    it('should return items with names ending on "e"', function () {
+      waitsForPromise(
+        db.allAsync('SELECT * FROM Item WHERE name LIKE ? ORDER BY id ASC', ['%e'])
+          .then(function (rows) {
+            expect(rows.length).toEqual(2);
+            expect(rows[0].name).toEqual('Apple');
+            expect(rows[1].name).toEqual('Orange');
+          })
+      );
+    });
   });
 
-  it('should call a callback for each row', function () {
-    var calls = 0,
-        countCall = function () { calls += 1; };
+  describe('eachAsync()', function () {
+    it('should call a callback for each row', function () {
+      var calls = 0,
+          countCall = function () { calls += 1; };
 
-    waitsForPromise(
-      db.eachAsync('SELECT * FROM Item', countCall)
-        .then(function () {
-          expect(calls).toEqual(3);
-          calls = 0;
-          return db.eachAsync('SELECT * FROM Item WHERE price > ?', [2], countCall);
-        })
-        .then(function () {
-          expect(calls).toEqual(2);
-        })
-    );
+      waitsForPromise(
+        db.eachAsync('SELECT * FROM Item', countCall)
+          .then(function () {
+            expect(calls).toEqual(3);
+            calls = 0;
+            return db.eachAsync('SELECT * FROM Item WHERE price > ?', [2], countCall);
+          })
+          .then(function () {
+            expect(calls).toEqual(2);
+          })
+      );
+    });
   });
 
-  it('should map a function over all rows', function () {
-    waitsForPromise(
-      db.mapAsync('SELECT * FROM Item', function (row) {
-        return row.price > 2 ? 'expensive' : 'cheap';
-      }).then(function (rating) {
-        expect(rating.length).toEqual(3);
-        expect(rating[0]).toEqual('cheap');
-        expect(rating[1]).toEqual('expensive');
-        expect(rating[2]).toEqual('expensive');
-      })
-    );
+  describe('mapAsync()', function () {
+    it('should map a function over all rows', function () {
+      waitsForPromise(
+        db.mapAsync('SELECT * FROM Item', function (row) {
+          return row.price > 2 ? 'expensive' : 'cheap';
+        }).then(function (rating) {
+          expect(rating.length).toEqual(3);
+          expect(rating[0]).toEqual('cheap');
+          expect(rating[1]).toEqual('expensive');
+          expect(rating[2]).toEqual('expensive');
+        })
+      );
+    });
   });
 
   describe('Error Handling', function () {
