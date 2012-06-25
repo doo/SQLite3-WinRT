@@ -1,5 +1,5 @@
 ﻿describe('SQLite3JS', function () {
-  function waitsForPromise (promise) {
+  function waitsForPromise(promise) {
     var done = false;
 
     promise.then(function () {
@@ -11,7 +11,7 @@
 
     waitsFor(function () { return done; });
   }
-  
+
   var db = null;
 
   beforeEach(function () {
@@ -39,6 +39,18 @@
   });
 
   describe('runAsync()', function () {
+    it('should allow chaining', function () {
+      waitsForPromise(
+        db.runAsync('DELETE FROM Item WHERE id = 1')
+          .then(function (chainedDb) {
+            return chainedDb.oneAsync('SELECT COUNT(*) AS count FROM Item');
+          })
+          .then(function (row) {
+            expect(row.count).toEqual(2);
+          })
+      );
+    });
+
     it('should allow binding null arguments', function () {
       var name = 'Mango';
 
