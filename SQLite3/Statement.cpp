@@ -50,23 +50,12 @@ namespace SQLite3 {
   }
 
   void Statement::Run() {
-    int ret = Step();
-
-    if (ret != SQLITE_ROW && ret != SQLITE_DONE) {
-      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
-      throw ref new Platform::COMException(hresult);
-    }
+    Step();
   }
 
   Row^ Statement::One() {
-    int ret = Step();
-
-    if (ret == SQLITE_ROW) {
-      return GetRow();
-    } else {
-      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
-      throw ref new Platform::COMException(hresult);
-    }
+    Step();
+    return GetRow();
   }
 
   Rows^ Statement::All() {
@@ -119,7 +108,14 @@ namespace SQLite3 {
   }
 
   int Statement::Step() {
-    return sqlite3_step(statement);
+    int ret = sqlite3_step(statement);
+
+    if (ret != SQLITE_ROW && ret != SQLITE_DONE) {
+      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
+      throw ref new Platform::COMException(hresult);
+    }
+
+    return ret;
   }
 
   int Statement::ColumnCount() {
