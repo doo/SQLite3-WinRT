@@ -54,8 +54,7 @@ namespace SQLite3 {
   }
 
   Row^ Statement::One() {
-    Step();
-    return GetRow();
+    return (Step() == SQLITE_ROW) ? GetRow() : nullptr;
   }
 
   Rows^ Statement::All() {

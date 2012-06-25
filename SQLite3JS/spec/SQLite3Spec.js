@@ -67,6 +67,16 @@
     );
   });
 
+  describe('oneAsync()', function () {
+    it('should return null for empty queries', function () {
+      waitsForPromise(
+        db.oneAsync('SELECT * FROM Item WHERE name = ?', ['BEEF']).then(function (row) {
+          expect(row).toBeNull();
+        })
+      );
+    });
+  });
+
   it('should allow binding null arguments', function () {
     var name = 'Mango';
 
