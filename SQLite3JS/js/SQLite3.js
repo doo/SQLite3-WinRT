@@ -3,15 +3,6 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
-  // Alternative typeof implementation yielding more meaningful results,
-  // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
-  function type(obj) {
-    var typeString;
-
-    typeString = Object.prototype.toString.call(obj);
-    return typeString.substring(8, typeString.length - 1).toLowerCase();
-  }
-
   function toSQLiteError(comException, message) {
     var error = new Error(message);
     error.resultCode = comException.number & 0xffff;
@@ -42,7 +33,7 @@
       });
     },
     eachAsync: function (sql, args, callback) {
-      if (!callback && type(args) === 'function') {
+      if (!callback && typeof args === 'function') {
         callback = args;
         args = null;
       }
@@ -53,7 +44,7 @@
       });
     },
     mapAsync: function (sql, args, callback) {
-      if (!callback && type(args) === 'function') {
+      if (!callback && typeof args === 'function') {
         callback = args;
         args = null;
       }
@@ -67,7 +58,7 @@
       });
     },
     itemDataSource: function (sql, args, keyColumnName, groupKeyColumnName) {
-      if (type(args) === 'string') {
+      if (typeof args === 'string') {
         groupKeyColumnName = keyColumnName;
         keyColumnName = args;
         args = undefined;
@@ -76,7 +67,7 @@
       return new ItemDataSource(this, sql, args, keyColumnName, groupKeyColumnName);
     },
     groupDataSource: function (sql, args, keyColumnName, sizeColumnName) {
-      if (type(args) === 'string') {
+      if (typeof args === 'string') {
         sizeColumnName = keyColumnName;
         keyColumnName = args;
         args = undefined;
