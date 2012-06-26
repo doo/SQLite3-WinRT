@@ -66,6 +66,20 @@
           })
       );
     });
+
+    it('should allow binding arguments by name', function () {
+      waitsForPromise(
+        db.runAsync(
+          'INSERT INTO Item (name, price, id) VALUES (:name, :price, :id)',
+          { name: 'Papaya', price: 5.2, id: 4 })
+          .then(function () {
+            return db.oneAsync('SELECT COUNT(*) AS cnt FROM Item WHERE price > 5');
+          })
+          .then(function (row) {
+            expect(row.cnt).toEqual(1);
+          })
+      );
+    });
   });
 
   describe('oneAsync()', function () {
