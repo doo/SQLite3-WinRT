@@ -1,16 +1,25 @@
 #pragma once
 
 #include "sqlite3.h"
+#include "Common.h"
 
-namespace SQLite3
-{
-  ref class Database;
-
-  public ref class Statement sealed
-  {
+namespace SQLite3 {
+  class Statement {
   public:
-    Statement(Database^ database, Platform::String^ sql);
+    static StatementPtr Prepare(sqlite3* sqlite, Platform::String^ sql);
     ~Statement();
+
+    void Bind(const SafeParameters& params);
+    void Run();
+    Row^ One();
+    Rows^ All();
+    void Each(EachCallback^ callback, Windows::UI::Core::CoreDispatcher^ dispatcher);
+
+  private:
+    Statement(sqlite3_stmt* statement);
+
+    Row^ GetRow();
+    Platform::Object^ GetColumn(int index);
 
     int Step();
 
