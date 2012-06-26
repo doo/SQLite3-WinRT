@@ -27,6 +27,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Common.cpp" />
     <ClCompile Include="Constants.cpp" />
     <ClCompile Include="Database.cpp" />
     <ClCompile Include="sqlite3.c">

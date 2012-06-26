@@ -1,6 +1,5 @@
 #include <collection.h>
 #include <ppltasks.h>
-#include <Winerror.h>
 
 #include "Database.h"
 #include "Statement.h"
@@ -23,9 +22,7 @@ namespace SQLite3 {
 
       if (ret != SQLITE_OK) {
         sqlite3_close(sqlite);
-
-        HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
-        throw ref new Platform::COMException(hresult);
+        throwSQLiteError(ret);
       }
 
       return ref new Database(sqlite);

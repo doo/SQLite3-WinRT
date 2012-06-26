@@ -1,5 +1,8 @@
 #pragma once;
 
+#include <memory>
+#include <vector>
+
 namespace SQLite3 {
   ref class Database;
   class Statement;
@@ -17,4 +20,6 @@ namespace SQLite3 {
 
   using Windows::Foundation::IAsyncAction;
   using Windows::Foundation::IAsyncOperation;
+
+  void throwSQLiteError(int resultCode);
 }

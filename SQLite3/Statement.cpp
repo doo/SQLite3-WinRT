@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <collection.h>
 #include <ppltasks.h>
-#include <Winerror.h>
 
 #include "Statement.h"
 #include "Database.h"
@@ -22,9 +21,7 @@ namespace SQLite3 {
 
     if (ret != SQLITE_OK) {
       sqlite3_finalize(statement);
-
-      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
-      throw ref new Platform::COMException(hresult);
+      throwSQLiteError(ret);
     }
 
     return StatementPtr(new Statement(statement));
@@ -151,8 +148,7 @@ namespace SQLite3 {
       return Step();
     }
     if (ret != SQLITE_ROW && ret != SQLITE_DONE) {
-      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
-      throw ref new Platform::COMException(hresult);
+      throwSQLiteError(ret);
     }
 
     return ret;
