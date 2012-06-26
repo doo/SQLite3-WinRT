@@ -1,21 +1,22 @@
 #pragma once
 
 #include "sqlite3.h"
+#include "Common.h"
 
-namespace SQLite3
-{
-  ref class Statement;
-
-  public ref class Database sealed
-  {
+namespace SQLite3 {
+  public ref class Database sealed {
   public:
-    Database(Platform::String^ dbPath);
+    static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
     ~Database();
 
-    Statement^ Prepare(Platform::String^ sql);
+    IAsyncAction^ RunAsync(Platform::String^ sql, Parameters^ params);
+    IAsyncOperation<Row^>^ OneAsync(Platform::String^ sql, Parameters^ params);
+    IAsyncOperation<Rows^>^ AllAsync(Platform::String^ sql, Parameters^ params);
+    IAsyncAction^ EachAsync(Platform::String^ sql, Parameters^ params, EachCallback^ callback);
 
   private:
-    friend Statement;
+    Database(sqlite3* sqlite);
+    StatementPtr PrepareAndBind(Platform::String^ sql, const SafeParameters& params);
 
     sqlite3* sqlite;
   };

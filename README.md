@@ -1,6 +1,6 @@
 # SQLite3-WinRT
 
-A set of SQLite wrappers for WinRT (Windows Metro) applications.
+Async SQLite for WinRT (Windows Metro) applications.
 
 ## Status
 
@@ -11,60 +11,38 @@ production use and Windows Store compatibility, and it will mature as the
 Windows 8 platform itself matures. Feedback and contributions are highly
 appreciated, feel free to open issues or pull requests on GitHub.
 
-## _SQLite3_
+## SQLite3JS Namespace
 
-This WinRT component provides an `SQLite3` namespace that can be used in C# and
-Javascript. It exposes the low-level SQLite API. C structs are "objectified",
-and function names are changed to follow the WinRT naming conventions, but
-other than that, it is a one-to-one copy of the original SQLite API.
+The SQLite3JS namespace provides an async JavaScript API for SQLite. It is built
+around the `Database` object that can be obtained using `SQLite3JS.openAsync()`.
+The API was inspired by [node-sqlite3][1].
 
-### JavaScript Example
+ [1]: https://github.com/developmentseed/node-sqlite3/
 
-    dbPath = Windows.Storage.ApplicationData.current.localFolder.path + '\\db.sqlite';
-    db = new SQLite3.Database(dbPath);
+### Example
 
-    statement = db.prepare('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
-    statement.step();
-    statement.close();
+    var dbPath = Windows.Storage.ApplicationData.current.localFolder.path + '\\db.sqlite';
+    SQLite3JS.openAsync(dbPath)
+      .then(function (db) {
+        return db.runAsync('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
+      })
+      .then(function (db) {
+        return db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Mango', 4.6, 123]);
+      })
+      .then(function (db) {
+        return db.eachAsync('SELECT * FROM Item', function (row) {
+          console.log('Get a ' + row.name + ' for $' + row.price);
+        });
+      })
+      .then(function (db) {
+        db.close();
+      });
 
-    statement = db.prepare('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)');
-    statement.bindText(1, 'Mango');
-    statement.bindDouble(2, 4.6);
-    statement.bindInt(3, 123);
-    statement.step();
-    statement.close();
+## SQLite3 WinRT Component
 
-    statement = db.prepare('SELECT * FROM Item');
-    while (statement.step() === SQLite3.ResultCode.row) {
-      name = statement.columnText(0);
-      price = statement.columnDouble(1);
-      id = statement.columnInt(2);
-    }
-    statement.close();
-
-    db.close();
-
-## _SQLite3JS_
-
-This abstraction layer on top of the _SQLite3_ component facilitates using
-SQLite in JavaScript applications.
-
-### JavaScript Example
-
-    dbPath = Windows.Storage.ApplicationData.current.localFolder.path + '\\db.sqlite';
-    db = new SQLite3JS.Database(dbPath);
-
-    db.run('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)');
-    db.run('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Mango', 4.6, 123]);
-
-    rows = db.all('SELECT * FROM Item');
-    rows.forEach(function (row) {
-      name = row.name;
-      price = row.price;
-      id = row.id;
-    });
-
-    db.close();
+In addition to the JavaScript API, SQLite3-WinRT contains a WinRT component DLL
+called SQLite3. This component is the basis for SQLite3JS, but it can also be
+used directly, e.g. in a C# app.
 
 ## License
 
