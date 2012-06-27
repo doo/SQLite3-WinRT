@@ -3,6 +3,32 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
+  // Alternative typeof implementation yielding more meaningful results,
+  // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
+  function type(obj) {
+    var typeString;
+
+    typeString = Object.prototype.toString.call(obj);
+    return typeString.substring(8, typeString.length - 1).toLowerCase();
+  }
+
+  function toPropertySet(object) {
+    var key, propertySet = new Windows.Foundation.Collections.PropertySet();
+
+    for (key in object) {
+      if (object.hasOwnProperty(key)) {
+        propertySet.insert(key, object[key]);
+      }
+    }
+
+    return propertySet;
+  }
+
+  function prepareArgs(args) {
+    args = args || [];
+    return (args instanceof Array) ? args : toPropertySet(args);
+  }
+
   function wrapComException(comException) {
     return WinJS.Promise.wrapError({
       message: 'SQLite Error',
@@ -11,36 +37,46 @@
   }
 
   function wrapDatabase(connection) {
+    function callNative(funcName, sql, args, callback) {
+      var preparedArgs = prepareArgs(args);
+
+      if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
+        return connection[funcName + "Map"](sql, preparedArgs, callback);
+      }
+
+      return connection[funcName + "Vector"](sql, preparedArgs, callback);
+    }
+
     var that = {
       runAsync: function (sql, args) {
-        return connection.runAsync(sql, args).then(function () {
+        return callNative('runAsync', sql, args).then(function () {
           return that;
         }, wrapComException);
       },
       oneAsync: function (sql, args) {
-        return connection.oneAsync(sql, args).then(function (row) {
+        return callNative('oneAsync', sql, args).then(function (row) {
           return row;
         }, wrapComException);
       },
       allAsync: function (sql, args) {
-        return connection.allAsync(sql, args).then(function (rows) {
+        return callNative('allAsync', sql, args).then(function (rows) {
           return rows;
         }, wrapComException);
       },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
           callback = args;
-          args = null;
+          args = undefined;
         }
 
-        return connection.eachAsync(sql, args, callback).then(function () {
+        return callNative('eachAsync', sql, args, callback).then(function () {
           return that;
         }, wrapComException);
       },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
           callback = args;
-          args = null;
+          args = undefined;
         }
 
         var results = [];

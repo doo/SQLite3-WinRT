@@ -66,6 +66,22 @@
           })
       );
     });
+
+    it('should allow binding arguments by name', function () {
+      waitsForPromise(
+        db.runAsync(
+          'INSERT INTO Item (name, price, id) VALUES (:name, :price, :id)',
+          { name: 'Papaya', price: 5.2, id: 4 })
+          .then(function () {
+            return db.oneAsync(
+              'SELECT COUNT(*) AS cnt FROM Item WHERE price > :limit',
+              { limit: 5 });
+          })
+          .then(function (row) {
+            expect(row.cnt).toEqual(1);
+          })
+      );
+    });
   });
 
   describe('oneAsync()', function () {
@@ -99,7 +115,9 @@
   describe('allAsync()', function () {
     it('should return items with names ending on "e"', function () {
       waitsForPromise(
-        db.allAsync('SELECT * FROM Item WHERE name LIKE ? ORDER BY id ASC', ['%e'])
+        db.allAsync(
+          'SELECT * FROM Item WHERE name LIKE :pattern ORDER BY id ASC',
+          { pattern: '%e' })
           .then(function (rows) {
             expect(rows.length).toEqual(2);
             expect(rows[0].name).toEqual('Apple');
@@ -110,7 +128,7 @@
 
     it('should return empty array for empty queries', function () {
       waitsForPromise(
-        db.allAsync('SELECT * FROM Item WHERE id < 0').then(function (rows) {
+        db.allAsync('SELECT * FROM Item WHERE id < ?', [0]).then(function (rows) {
           expect(rows.length).toEqual(0);
         })
       );
@@ -118,19 +136,38 @@
   });
 
   describe('eachAsync()', function () {
-    it('should call a callback for each row', function () {
-      var calls = 0,
-          countCall = function () { calls += 1; };
+    var ids;
 
+    beforeEach(function () {
+      ids = [];
+      this.rememberId = function (row) { ids.push(row.id); };
+    });
+
+    it('should call a callback for each row', function () {
       waitsForPromise(
-        db.eachAsync('SELECT * FROM Item', countCall)
+        db.eachAsync('SELECT * FROM Item ORDER BY id', this.rememberId)
           .then(function () {
-            expect(calls).toEqual(3);
-            calls = 0;
-            return db.eachAsync('SELECT * FROM Item WHERE price > ?', [2], countCall);
+            expect(ids).toEqual([1, 2, 3]);
           })
+      );
+    });
+
+    it('should allow binding arguments', function () {
+      waitsForPromise(
+        db.eachAsync('SELECT * FROM Item WHERE price > ? ORDER BY id', [2], this.rememberId)
           .then(function () {
-            expect(calls).toEqual(2);
+            expect(ids).toEqual([2, 3]);
+          })
+      );
+    });
+
+    it('should allow binding arguments by name', function () {
+      waitsForPromise(
+        db.eachAsync(
+          'SELECT * FROM Item WHERE price < :max ORDER BY id',
+          { max: 3 },
+          this.rememberId).then(function () {
+            expect(ids).toEqual([1, 2]);
           })
       );
     });
@@ -242,7 +279,7 @@
           white: true,
           nomen: true,
           bitwise: true,
-          predef: ['SQLite3', 'WinJS']
+          predef: ['SQLite3', 'WinJS', 'Windows']
         };
         if (JSLINT(this.actual, options)) {
           return true;

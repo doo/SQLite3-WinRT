@@ -6,8 +6,8 @@
 #include "Statement.h"
 
 namespace SQLite3 {
-  static SafeParameters copyParameters(Parameters^ params) {
-    SafeParameters paramsCopy;
+  static SafeParameterVector copyParameters(ParameterVector^ params) {
+    SafeParameterVector paramsCopy;
 
     if (params) {
       std::copy(begin(params), end(params), std::back_inserter(paramsCopy));
@@ -40,46 +40,75 @@ namespace SQLite3 {
     sqlite3_close(sqlite);
   }
 
-  IAsyncAction^ Database::RunAsync(Platform::String^ sql, Parameters^ params) {
-    auto safeParams = copyParameters(params);
+  IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return RunAsync(sql, copyParameters(params));
+  }
 
+  IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+    return RunAsync(sql, params);
+  }
+
+  template <typename ParameterContainer>
+  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      StatementPtr statement = PrepareAndBind(sql, params);
       statement->Run();
     });
   }
 
-  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, Parameters^ params) {
-    auto safeParams = copyParameters(params);
+  IAsyncOperation<Row^>^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return OneAsync(sql, copyParameters(params));
+  }
 
+  IAsyncOperation<Row^>^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+    return OneAsync(sql, params);
+  }
+
+  template <typename ParameterContainer>
+  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      StatementPtr statement = PrepareAndBind(sql, params);
       return statement->One();
     });
   }
 
-  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, Parameters^ params) {
-    auto safeParams = copyParameters(params);
+  IAsyncOperation<Rows^>^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return AllAsync(sql, copyParameters(params));
+  }
 
+  IAsyncOperation<Rows^>^ Database::AllAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+    return AllAsync(sql, params);
+  }
+
+  template <typename ParameterContainer>
+  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      StatementPtr statement = PrepareAndBind(sql, params);
       return statement->All();
     });
   }
 
-  IAsyncAction^ Database::EachAsync(Platform::String^ sql, Parameters^ params, EachCallback^ callback) {
-    auto safeParams = copyParameters(params);
+  IAsyncAction^ Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
+    return EachAsync(sql, copyParameters(params), callback);
+  }
 
+  IAsyncAction^ Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
+    return EachAsync(sql, params, callback);
+  }
+
+  template <typename ParameterContainer>
+  IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
     auto window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
     auto dispatcher = window->Dispatcher;
 
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      StatementPtr statement = PrepareAndBind(sql, params);
       return statement->Each(callback, dispatcher);
     });
   }
 
-  StatementPtr Database::PrepareAndBind(Platform::String^ sql, const SafeParameters& params) {
+  template <typename ParameterContainer>
+  StatementPtr Database::PrepareAndBind(Platform::String^ sql, ParameterContainer params) {
     StatementPtr statement = Statement::Prepare(sqlite, sql);
     statement->Bind(params);
     return statement;
