@@ -73,6 +73,9 @@
           return that;
         }, wrapComException);
       },
+      getLastInsertRowId: function () {
+        return connection.getLastInsertRowId();
+      },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
           callback = args;

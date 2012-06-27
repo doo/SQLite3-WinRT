@@ -18,6 +18,8 @@ namespace SQLite3 {
     IAsyncAction^ EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
     IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
+    long long GetLastInsertRowId();
+
   private:
     Database(sqlite3* sqlite);
 

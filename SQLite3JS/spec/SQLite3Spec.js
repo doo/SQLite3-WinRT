@@ -173,6 +173,17 @@
     });
   });
 
+  describe('getLastInsertRowId()', function () {
+    it('should retrieve the id of the last inserted row', function () {
+      waitsForPromise(
+        db.runAsync("INSERT INTO Item (name) VALUES (?)", ['Ananas']).then( function() {
+          id = db.getLastInsertRowId();
+          expect(id).toEqual(4);
+        })
+      );
+    });
+  });
+
   describe('mapAsync()', function () {
     it('should map a function over all rows', function () {
       waitsForPromise(
