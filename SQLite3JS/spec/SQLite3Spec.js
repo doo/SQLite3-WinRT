@@ -137,18 +137,18 @@
 
   describe('eachAsync()', function () {
     it('should call a callback for each row', function () {
-      var calls = 0,
-          countCall = function () { calls += 1; };
+      var ids = [],
+          rememberId = function (row) { ids.push(row.id); };
 
       waitsForPromise(
-        db.eachAsync('SELECT * FROM Item', countCall)
+        db.eachAsync('SELECT * FROM Item ORDER BY id', rememberId)
           .then(function () {
-            expect(calls).toEqual(3);
-            calls = 0;
-            return db.eachAsync('SELECT * FROM Item WHERE price > ?', [2], countCall);
+            expect(ids).toEqual([1, 2, 3]);
+            ids = [];
+            return db.eachAsync('SELECT * FROM Item WHERE price > ? ORDER BY id', [2], rememberId);
           })
           .then(function () {
-            expect(calls).toEqual(2);
+            expect(ids).toEqual([2, 3]);
           })
       );
     });
