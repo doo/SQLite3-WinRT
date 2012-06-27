@@ -28,7 +28,7 @@ namespace SQLite3 {
     sqlite3_finalize(statement);
   }
 
-  void Statement::Bind(const SafeParameters& params) {
+  void Statement::Bind(const SafeParameterVector& params) {
     int index = 1;
 
     std::for_each(std::begin(params), std::end(params), [&](Platform::Object^ param) {

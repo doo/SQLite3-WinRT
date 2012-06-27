@@ -6,8 +6,8 @@
 #include "Statement.h"
 
 namespace SQLite3 {
-  static SafeParameters copyParameters(Parameters^ params) {
-    SafeParameters paramsCopy;
+  static SafeParameterVector copyParameters(ParameterVector^ params) {
+    SafeParameterVector paramsCopy;
 
     if (params) {
       std::copy(begin(params), end(params), std::back_inserter(paramsCopy));
@@ -40,7 +40,7 @@ namespace SQLite3 {
     sqlite3_close(sqlite);
   }
 
-  IAsyncAction^ Database::RunAsync(Platform::String^ sql, Parameters^ params) {
+  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterVector^ params) {
     auto safeParams = copyParameters(params);
 
     return concurrency::create_async([=]() {
@@ -49,7 +49,7 @@ namespace SQLite3 {
     });
   }
 
-  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, Parameters^ params) {
+  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, ParameterVector^ params) {
     auto safeParams = copyParameters(params);
 
     return concurrency::create_async([=]() {
@@ -58,7 +58,7 @@ namespace SQLite3 {
     });
   }
 
-  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, Parameters^ params) {
+  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, ParameterVector^ params) {
     auto safeParams = copyParameters(params);
 
     return concurrency::create_async([=]() {
@@ -67,7 +67,7 @@ namespace SQLite3 {
     });
   }
 
-  IAsyncAction^ Database::EachAsync(Platform::String^ sql, Parameters^ params, EachCallback^ callback) {
+  IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
     auto safeParams = copyParameters(params);
 
     auto window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
@@ -79,7 +79,7 @@ namespace SQLite3 {
     });
   }
 
-  StatementPtr Database::PrepareAndBind(Platform::String^ sql, const SafeParameters& params) {
+  StatementPtr Database::PrepareAndBind(Platform::String^ sql, const SafeParameterVector& params) {
     StatementPtr statement = Statement::Prepare(sqlite, sql);
     statement->Bind(params);
     return statement;

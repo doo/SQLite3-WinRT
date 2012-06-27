@@ -9,14 +9,14 @@ namespace SQLite3 {
     static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
     ~Database();
 
-    IAsyncAction^ RunAsync(Platform::String^ sql, Parameters^ params);
-    IAsyncOperation<Row^>^ OneAsync(Platform::String^ sql, Parameters^ params);
-    IAsyncOperation<Rows^>^ AllAsync(Platform::String^ sql, Parameters^ params);
-    IAsyncAction^ EachAsync(Platform::String^ sql, Parameters^ params, EachCallback^ callback);
+    IAsyncAction^ RunAsync(Platform::String^ sql, ParameterVector^ params);
+    IAsyncOperation<Row^>^ OneAsync(Platform::String^ sql, ParameterVector^ params);
+    IAsyncOperation<Rows^>^ AllAsync(Platform::String^ sql, ParameterVector^ params);
+    IAsyncAction^ EachAsync(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
 
   private:
     Database(sqlite3* sqlite);
-    StatementPtr PrepareAndBind(Platform::String^ sql, const SafeParameters& params);
+    StatementPtr PrepareAndBind(Platform::String^ sql, const SafeParameterVector& params);
 
     sqlite3* sqlite;
   };
