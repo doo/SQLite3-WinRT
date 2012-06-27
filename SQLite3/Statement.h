@@ -10,6 +10,7 @@ namespace SQLite3 {
     ~Statement();
 
     void Bind(const SafeParameterVector& params);
+    void Bind(ParameterMap^ params);
     void Run();
     Row^ One();
     Rows^ All();
@@ -26,11 +27,13 @@ namespace SQLite3 {
     int ColumnCount();
     int ColumnType(int index);
     Platform::String^ ColumnName(int index);
-
     Platform::String^ ColumnText(int index);
     int ColumnInt(int index);
     double ColumnDouble(int index);
 
+    void BindParameter(int index, Platform::Object^ value);
+    int BindParameterCount();
+    std::wstring BindParameterName(int index);
     int BindText(int index, Platform::String^ val);
     int BindInt(int index, int val);
     int BindDouble(int index, double val);

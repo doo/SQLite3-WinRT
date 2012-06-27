@@ -8,6 +8,8 @@ namespace SQLite3 {
   typedef Windows::Foundation::Collections::IVectorView<Platform::Object^> ParameterVector;
   typedef std::vector<Platform::Object^> SafeParameterVector;
 
+  typedef Windows::Foundation::Collections::PropertySet ParameterMap;
+
   typedef Windows::Foundation::Collections::IMapView<Platform::String^, Platform::Object^> Row;
   typedef Windows::Foundation::Collections::IVectorView<Row^> Rows;
 

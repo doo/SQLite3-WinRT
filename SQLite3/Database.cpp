@@ -40,11 +40,18 @@ namespace SQLite3 {
     sqlite3_close(sqlite);
   }
 
-  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterVector^ params) {
-    auto safeParams = copyParameters(params);
+  IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return RunAsync(sql, copyParameters(params));
+  }
 
+  IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+    return RunAsync(sql, params);
+  }
+
+  template <typename ParameterContainer>
+  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      StatementPtr statement = PrepareAndBind(sql, params);
       statement->Run();
     });
   }
@@ -79,7 +86,8 @@ namespace SQLite3 {
     });
   }
 
-  StatementPtr Database::PrepareAndBind(Platform::String^ sql, const SafeParameterVector& params) {
+  template <typename ParameterContainer>
+  StatementPtr Database::PrepareAndBind(Platform::String^ sql, ParameterContainer params) {
     StatementPtr statement = Statement::Prepare(sqlite, sql);
     statement->Bind(params);
     return statement;

@@ -3,6 +3,27 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
+  // Alternative typeof implementation yielding more meaningful results,
+  // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
+  function type(obj) {
+    var typeString;
+
+    typeString = Object.prototype.toString.call(obj);
+    return typeString.substring(8, typeString.length - 1).toLowerCase();
+  }
+
+  function toPropertySet(object) {
+    var key, propertySet = new Windows.Foundation.Collections.PropertySet();
+
+    for (key in object) {
+      if (object.hasOwnProperty(key)) {
+        propertySet.insert(key, object[key]);
+      }
+    }
+
+    return propertySet;
+  }
+
   function wrapComException(comException) {
     return WinJS.Promise.wrapError({
       message: 'SQLite Error',
@@ -13,7 +34,15 @@
   function wrapDatabase(connection) {
     var that = {
       runAsync: function (sql, args) {
-        return connection.runAsync(sql, args).then(function () {
+        args = args || [];
+
+        if (type(args) === 'array') {
+          return connection.runAsyncVector(sql, args).then(function () {
+            return that;
+          }, wrapComException);
+        }
+
+        return connection.runAsyncMap(sql, toPropertySet(args)).then(function () {
           return that;
         }, wrapComException);
       },
