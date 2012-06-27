@@ -107,6 +107,10 @@ namespace SQLite3 {
     });
   }
 
+  long long Database::GetLastInsertRowId() {
+    return sqlite3_last_insert_rowid(sqlite);
+  }
+  
   template <typename ParameterContainer>
   StatementPtr Database::PrepareAndBind(Platform::String^ sql, ParameterContainer params) {
     StatementPtr statement = Statement::Prepare(sqlite, sql);
