@@ -5,7 +5,7 @@
     promise.then(function () {
       done = true;
     }, function (error) {
-      currentJasmineSpec.fail(error);
+      jasmine.getEnv().currentSpec.fail(error);
       done = true;
     });
 
