@@ -136,19 +136,38 @@
   });
 
   describe('eachAsync()', function () {
-    it('should call a callback for each row', function () {
-      var ids = [],
-          rememberId = function (row) { ids.push(row.id); };
+    var ids;
 
+    beforeEach(function () {
+      ids = [];
+      this.rememberId = function (row) { ids.push(row.id); };
+    });
+
+    it('should call a callback for each row', function () {
       waitsForPromise(
-        db.eachAsync('SELECT * FROM Item ORDER BY id', rememberId)
+        db.eachAsync('SELECT * FROM Item ORDER BY id', this.rememberId)
           .then(function () {
             expect(ids).toEqual([1, 2, 3]);
-            ids = [];
-            return db.eachAsync('SELECT * FROM Item WHERE price > ? ORDER BY id', [2], rememberId);
           })
+      );
+    });
+
+    it('should allow binding arguments', function () {
+      waitsForPromise(
+        db.eachAsync('SELECT * FROM Item WHERE price > ? ORDER BY id', [2], this.rememberId)
           .then(function () {
             expect(ids).toEqual([2, 3]);
+          })
+      );
+    });
+
+    it('should allow binding arguments by name', function () {
+      waitsForPromise(
+        db.eachAsync(
+          'SELECT * FROM Item WHERE price < :max ORDER BY id',
+          { max: 3 },
+          this.rememberId).then(function () {
+            expect(ids).toEqual([1, 2]);
           })
       );
     });
