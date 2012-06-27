@@ -11,10 +11,12 @@ namespace SQLite3 {
 
     IAsyncAction^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
     IAsyncAction^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
-
-    IAsyncOperation<Row^>^ OneAsync(Platform::String^ sql, ParameterVector^ params);
-    IAsyncOperation<Rows^>^ AllAsync(Platform::String^ sql, ParameterVector^ params);
-    IAsyncAction^ EachAsync(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
+    IAsyncOperation<Row^>^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    IAsyncOperation<Row^>^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    IAsyncOperation<Rows^>^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    IAsyncOperation<Rows^>^ AllAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    IAsyncAction^ EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
+    IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
   private:
     Database(sqlite3* sqlite);
@@ -24,6 +26,12 @@ namespace SQLite3 {
 
     template <typename ParameterContainer>
     IAsyncAction^ RunAsync(Platform::String^ sql, ParameterContainer params);
+    template <typename ParameterContainer>
+    IAsyncOperation<Row^>^ OneAsync(Platform::String^ sql, ParameterContainer params);
+    template <typename ParameterContainer>
+    IAsyncOperation<Rows^>^ AllAsync(Platform::String^ sql, ParameterContainer params);
+    template <typename ParameterContainer>
+    IAsyncAction^ EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 
     sqlite3* sqlite;
   };

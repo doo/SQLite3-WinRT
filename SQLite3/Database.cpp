@@ -56,32 +56,53 @@ namespace SQLite3 {
     });
   }
 
-  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, ParameterVector^ params) {
-    auto safeParams = copyParameters(params);
+  IAsyncOperation<Row^>^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return OneAsync(sql, copyParameters(params));
+  }
 
+  IAsyncOperation<Row^>^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+    return OneAsync(sql, params);
+  }
+
+  template <typename ParameterContainer>
+  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      StatementPtr statement = PrepareAndBind(sql, params);
       return statement->One();
     });
   }
 
-  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, ParameterVector^ params) {
-    auto safeParams = copyParameters(params);
+  IAsyncOperation<Rows^>^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return AllAsync(sql, copyParameters(params));
+  }
 
+  IAsyncOperation<Rows^>^ Database::AllAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+    return AllAsync(sql, params);
+  }
+
+  template <typename ParameterContainer>
+  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      StatementPtr statement = PrepareAndBind(sql, params);
       return statement->All();
     });
   }
 
-  IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
-    auto safeParams = copyParameters(params);
+  IAsyncAction^ Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
+    return EachAsync(sql, copyParameters(params), callback);
+  }
 
+  IAsyncAction^ Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
+    return EachAsync(sql, params, callback);
+  }
+
+  template <typename ParameterContainer>
+  IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
     auto window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
     auto dispatcher = window->Dispatcher;
 
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      StatementPtr statement = PrepareAndBind(sql, params);
       return statement->Each(callback, dispatcher);
     });
   }
