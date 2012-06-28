@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <collection.h>
 #include <ppltasks.h>
 #include <Winerror.h>
@@ -107,7 +108,7 @@ namespace SQLite3 {
     while (Step() == SQLITE_ROW) {
       rows->Append(GetRow());
     }
-
+  
     return rows->GetView();
   }
 
@@ -123,15 +124,42 @@ namespace SQLite3 {
     }
   }
 
+  void notifyUnlock(void* args[], int nArgs) {
+    assert(nArgs == 1);
+    for (int i = 0; i < nArgs; i++) {
+      ((Statement*)args[i])->NotifyUnlock();
+    }
+  }
+
+  void Statement::NotifyUnlock() {
+    ReleaseMutex(dbLockMutex);
+  }
+
   int Statement::Step() {
     int ret = sqlite3_step(statement);
-
+    if (ret == SQLITE_LOCKED) {
+      // HACK, HACK, HACK! Extract the sqlite connection from the statement
+      sqlite3* db = (sqlite3*)((void**)statement)[0];
+      dbLockMutex = CreateMutexExW(NULL, NULL, CREATE_MUTEX_INITIAL_OWNER, NULL);
+      ret = sqlite3_unlock_notify(db, &notifyUnlock, this);
+      if (ret == SQLITE_LOCKED) {
+        ReleaseMutex(dbLockMutex);
+        return SQLITE_LOCKED;
+      }
+      WaitForSingleObjectEx(dbLockMutex, INFINITE, false);
+      sqlite3_reset(statement);
+      return Step();
+    }
     if (ret != SQLITE_ROW && ret != SQLITE_DONE) {
       HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
       throw ref new Platform::COMException(hresult);
     }
 
     return ret;
+  }
+
+  bool Statement::ReadOnly() const {
+    return sqlite3_stmt_readonly(statement) != 0;
   }
 
   Row^ Statement::GetRow() {

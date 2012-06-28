@@ -5,6 +5,8 @@
 
 namespace SQLite3 {
   class Statement {
+    friend void notifyUnlock(void* args[], int nArgs);
+
   public:
     static StatementPtr Prepare(sqlite3* sqlite, Platform::String^ sql);
     ~Statement();
@@ -16,6 +18,8 @@ namespace SQLite3 {
     Row^ One();
     Rows^ All();
     void Each(EachCallback^ callback, Windows::UI::Core::CoreDispatcher^ dispatcher);
+
+    bool ReadOnly() const;
 
   private:
     Statement(sqlite3_stmt* statement);
@@ -39,7 +43,11 @@ namespace SQLite3 {
     int ColumnInt(int index);
     double ColumnDouble(int index);
 
+    void NotifyUnlock();
   private:
+    HANDLE dbLockMutex;
     sqlite3_stmt* statement;
   };
 }
+
+void notifyUnlock(void* args[], int nArgs);
