@@ -1,11 +1,39 @@
 ﻿describe('SQLite3JS', function () {
+  var currentJasmineSpec;
+  var jasmineEnv = jasmine.getEnv();
+  jasmineEnv.addReporter({
+    reportSpecStarting: function(spec) {
+      currentJasmineSpec = spec;
+    }
+  });
+
   function waitsForPromise(promise) {
     var done = false;
 
     promise.then(function () {
       done = true;
     }, function (error) {
-      currentJasmineSpec.fail(error);
+      var getErrorMessage = function (error) {
+        var errorMessage = error.message;
+        if (error.resultCode) {
+          errorMessage += " (Code " + error.resultCode + ")";
+        }
+        return errorMessage;
+      };
+      var errorMessage;
+
+      if (error.constructor == Array) {
+        errorMessage = "";
+        error.forEach(function (error) {
+          if (errorMessage.length > 0) {
+            errorMessage += ", ";
+          }
+          errorMessage += getErrorMessage(error);
+        });
+      } else {
+        errorMessage = getErrorMessage(error);
+      }
+      currentJasmineSpec.fail(errorMessage);
       done = true;
     });
 
