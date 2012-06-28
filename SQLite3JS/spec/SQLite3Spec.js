@@ -5,7 +5,26 @@
     promise.then(function () {
       done = true;
     }, function (error) {
-      jasmine.getEnv().currentSpec.fail(error);
+        var errorMessage = error.message;
+        if (error.resultCode) {
+          errorMessage += " (Code " + error.resultCode + ")";
+        }
+        return errorMessage;
+      };
+      var errorMessage;
+
+      if (error.constructor == Array) {
+        errorMessage = "";
+        error.forEach(function (error) {
+          if (errorMessage.length > 0) {
+            errorMessage += ", ";
+          }
+          errorMessage += getErrorMessage(error);
+        });
+      } else {
+        errorMessage = getErrorMessage(error);
+      }
+      jasmine.getEnv().currentSpec.fail(errorMessage);
       done = true;
     });
 
