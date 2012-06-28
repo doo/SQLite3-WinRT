@@ -12,6 +12,22 @@
     return typeString.substring(8, typeString.length - 1).toLowerCase();
   }
 
+  function toObject(propertySet) {
+    function toObjectImpl(propertySet) {
+      var key, object = {};
+
+      for (key in propertySet) {
+        if (propertySet.hasOwnProperty(key)) {
+          object[key] = propertySet[key];
+        }
+      }
+
+      return object;
+    }
+
+    return propertySet ? toObjectImpl(propertySet) : null;
+  }
+
   function toPropertySet(object) {
     var key, propertySet = new Windows.Foundation.Collections.PropertySet();
 
@@ -57,12 +73,12 @@
       },
       oneAsync: function (sql, args) {
         return callNative('oneAsync', sql, args).then(function (row) {
-          return row;
+          return toObject(row);
         }, wrapComException);
       },
       allAsync: function (sql, args) {
         return callNative('allAsync', sql, args).then(function (rows) {
-          return rows;
+          return rows.map(toObject);
         }, wrapComException);
       },
       eachAsync: function (sql, args, callback) {
@@ -71,7 +87,9 @@
           args = undefined;
         }
 
-        return callNative('eachAsync', sql, args, callback).then(function () {
+        return callNative('eachAsync', sql, args, function (row) {
+          callback(toObject(row));
+        }).then(function () {
           return that;
         }, wrapComException);
       },
