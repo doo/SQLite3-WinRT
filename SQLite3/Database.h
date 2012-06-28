@@ -7,6 +7,8 @@ namespace SQLite3 {
   public ref class Database sealed {
   public:
     static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
+    static void EnableSharedCache(bool enable);
+
     ~Database();
 
     IAsyncAction^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);

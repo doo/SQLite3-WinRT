@@ -16,8 +16,9 @@ namespace SQLite3 {
   }
 
   IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
-    return concurrency::create_async([=]() {
+    return concurrency::create_async([=]() -> Database^ {
       sqlite3* sqlite;
+      
       int ret = sqlite3_open16(dbPath->Data(), &sqlite);
 
       if (ret != SQLITE_OK) {
@@ -27,6 +28,13 @@ namespace SQLite3 {
 
       return ref new Database(sqlite);
     });
+  }
+
+  void Database::EnableSharedCache(bool enable) {
+    int ret = sqlite3_enable_shared_cache(enable);
+    if (ret != SQLITE_OK) {
+      throwSQLiteError(ret);
+    }
   }
 
   Database::Database(sqlite3* sqlite)
