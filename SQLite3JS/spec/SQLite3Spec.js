@@ -215,6 +215,42 @@
     });
   });
 
+  describe('Concurrency Handling', function () {
+    it('Should support two concurrent connections', function () {
+      var dbFilename = Windows.Storage.ApplicationData.current.temporaryFolder.path + "\\concurrencyTest.sqlite";
+      var db1, db2;
+      waitsForPromise(
+        SQLite3JS.openAsync(dbFilename).then(function (db) {
+          return db.runAsync("CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY, value TEXT)")
+        }).then(function (db) {
+          return db.runAsync("DELETE FROM TestData");
+        }).then(function (db) {
+          db1 = db;
+          return SQLite3JS.openAsync(dbFilename);
+        }).then(function (db) {
+          db2 = db;
+        }).then(function () {
+          return db1.runAsync("BEGIN TRANSACTION");
+        }).then(function () {
+          return db2.runAsync("BEGIN TRANSACTION");
+        }).then(function () {
+          promises = [];
+          for (var i = 0; i < 5; i++) {
+            var db = i % 2 ? db1 : db2;
+            var promise = db.runAsync("INSERT INTO TestData (value) VALUES (?)", ["Value " + i]);
+            promises.push(promise);
+          }
+          return WinJS.Promise.join(promises);
+        }).then(function () {
+          return SQLite3JS.openAsync(dbFilename);
+        }).then(function (db) {
+          return db.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
+        }).then(function (row) {
+          expect(row.rowCount).toEqual(5000);
+        }));
+    });
+  });
+
   describe('Error Handling', function () {
     it('should throw when creating an invalid database', function () {
       var thisSpec = this;
