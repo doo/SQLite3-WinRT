@@ -1,4 +1,8 @@
 ﻿describe('SQLite3JS', function () {
+  function notNull(object) {
+    return object !== null;
+  }
+
   function errorMessage(error) {
     return error.message;
   }
@@ -12,7 +16,7 @@
       var message;
 
       if (error.constructor === Array) {
-        message = error.map(errorMessage).join(', ');
+        message = error.filter(notNull).map(errorMessage).join(', ');
       } else {
         message = errorMessage(error);
       }
