@@ -189,17 +189,6 @@
     });
   });
 
-  describe('getLastInsertRowId()', function () {
-    it('should retrieve the id of the last inserted row', function () {
-      waitsForPromise(
-        db.runAsync("INSERT INTO Item (name) VALUES (?)", ['Ananas']).then( function() {
-          id = db.getLastInsertRowId();
-          expect(id).toEqual(4);
-        })
-      );
-    });
-  });
-
   describe('mapAsync()', function () {
     it('should map a function over all rows', function () {
       waitsForPromise(
@@ -210,6 +199,17 @@
           expect(rating[0]).toEqual('cheap');
           expect(rating[1]).toEqual('expensive');
           expect(rating[2]).toEqual('expensive');
+        })
+      );
+    });
+  });
+
+  describe('getLastInsertRowId()', function () {
+    it('should retrieve the id of the last inserted row', function () {
+      waitsForPromise(
+        db.runAsync("INSERT INTO Item (name) VALUES (?)", ['Ananas']).then(function () {
+          id = db.getLastInsertRowId();
+          expect(id).toEqual(4);
         })
       );
     });
