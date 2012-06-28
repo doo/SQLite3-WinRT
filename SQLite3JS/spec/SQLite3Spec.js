@@ -272,6 +272,14 @@
         })
       );
     });
+
+    it('should report the error of the last statement', function () {
+      waitsForPromise(
+        db.runAsync('invalid sql').then(null, function (err) {
+          expect(db.getLastError()).toEqual('near \"invalid\": syntax error');
+        })
+      );
+    });
   });
 
   describe('Item Data Source', function () {

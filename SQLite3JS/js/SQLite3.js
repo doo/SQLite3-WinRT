@@ -110,6 +110,12 @@
       getLastInsertRowId: function () {
         return connection.getLastInsertRowId();
       },
+      getAutocommit: function () {
+        return connection.getAutocommit();
+      },
+      getLastError: function () {
+        return connection.getLastError();
+      },
       itemDataSource: function (sql, args, keyColumnName, groupKeyColumnName) {
         if (typeof args === 'string') {
           groupKeyColumnName = keyColumnName;

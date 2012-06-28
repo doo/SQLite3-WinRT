@@ -20,7 +20,9 @@ namespace SQLite3 {
     IAsyncAction^ EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
     IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
+    bool GetAutocommit();
     long long GetLastInsertRowId();
+    Platform::String^ GetLastError();
 
   private:
     Database(sqlite3* sqlite);
@@ -38,5 +40,6 @@ namespace SQLite3 {
     IAsyncAction^ EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 
     sqlite3* sqlite;
+    std::wstring lastErrorMsg;
   };
 }

@@ -56,8 +56,13 @@ namespace SQLite3 {
   template <typename ParameterContainer>
   IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, params);
-      statement->Run();
+      try {
+        StatementPtr statement = PrepareAndBind(sql, params);
+        statement->Run();
+      } catch (...) {
+        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+        throw;
+      }
     });
   }
 
@@ -72,8 +77,13 @@ namespace SQLite3 {
   template <typename ParameterContainer>
   IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, params);
-      return statement->One();
+      try {
+        StatementPtr statement = PrepareAndBind(sql, params);
+        return statement->One();
+      } catch (...) {
+        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+        throw;
+      }
     });
   }
 
@@ -88,8 +98,13 @@ namespace SQLite3 {
   template <typename ParameterContainer>
   IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, params);
-      return statement->All();
+      try {
+        StatementPtr statement = PrepareAndBind(sql, params);
+        return statement->All();
+      } catch (...) {
+        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+        throw;
+      }
     });
   }
 
@@ -107,15 +122,28 @@ namespace SQLite3 {
     auto dispatcher = window->Dispatcher;
 
     return concurrency::create_async([=]() {
-      StatementPtr statement = PrepareAndBind(sql, params);
-      return statement->Each(callback, dispatcher);
+      try {
+        StatementPtr statement = PrepareAndBind(sql, params);
+        return statement->Each(callback, dispatcher);
+      } catch (...) {
+        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+        throw;
+      }
     });
+  }
+
+  bool Database::GetAutocommit() {
+    return sqlite3_get_autocommit(sqlite) != 0;
   }
 
   long long Database::GetLastInsertRowId() {
     return sqlite3_last_insert_rowid(sqlite);
   }
   
+  Platform::String^ Database::GetLastError() {
+    return ref new Platform::String(lastErrorMsg.c_str());
+  }
+
   template <typename ParameterContainer>
   StatementPtr Database::PrepareAndBind(Platform::String^ sql, ParameterContainer params) {
     StatementPtr statement = Statement::Prepare(sqlite, sql);
