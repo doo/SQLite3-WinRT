@@ -1,11 +1,23 @@
 ﻿describe('SQLite3JS', function () {
+  function errorMessage(error) {
+    return error.message;
+  }
+
   function waitsForPromise(promise) {
     var done = false;
 
     promise.then(function () {
       done = true;
     }, function (error) {
-      jasmine.getEnv().currentSpec.fail(error);
+      var message;
+
+      if (error.constructor === Array) {
+        message = error.map(errorMessage).join(', ');
+      } else {
+        message = errorMessage(error);
+      }
+
+      jasmine.getEnv().currentSpec.fail(message);
       done = true;
     });
 
