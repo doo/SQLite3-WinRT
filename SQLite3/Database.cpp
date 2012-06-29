@@ -15,19 +15,17 @@ namespace SQLite3 {
     return paramsCopy;
   }
 
-  IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
-    return concurrency::create_async([=]() -> Database^ {
-      sqlite3* sqlite;
+  Database^ Database::Open(Platform::String^ dbPath) {
+    sqlite3* sqlite;
       
-      int ret = sqlite3_open16(dbPath->Data(), &sqlite);
+    int ret = sqlite3_open16(dbPath->Data(), &sqlite);
 
-      if (ret != SQLITE_OK) {
-        sqlite3_close(sqlite);
-        throwSQLiteError(ret);
-      }
+    if (ret != SQLITE_OK) {
+      sqlite3_close(sqlite);
+      throwSQLiteError(ret);
+    }
 
-      return ref new Database(sqlite);
-    });
+    return ref new Database(sqlite);
   }
 
   void Database::EnableSharedCache(bool enable) {
@@ -45,91 +43,83 @@ namespace SQLite3 {
     sqlite3_close(sqlite);
   }
 
-  IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return RunAsync(sql, copyParameters(params));
+  void Database::RunVector(Platform::String^ sql, ParameterVector^ params) {
+    return Run(sql, copyParameters(params));
   }
 
-  IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
-    return RunAsync(sql, params);
-  }
-
-  template <typename ParameterContainer>
-  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
-    return concurrency::create_async([=]() {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        statement->Run();
-      } catch (...) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
-  }
-
-  IAsyncOperation<Row^>^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return OneAsync(sql, copyParameters(params));
-  }
-
-  IAsyncOperation<Row^>^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
-    return OneAsync(sql, params);
+  void Database::RunMap(Platform::String^ sql, ParameterMap^ params) {
+    return Run(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
-    return concurrency::create_async([=]() {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        return statement->One();
-      } catch (...) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  void Database::Run(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      statement->Run();
+    } catch (...) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
-  IAsyncOperation<Rows^>^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return AllAsync(sql, copyParameters(params));
+  Row^ Database::OneVector(Platform::String^ sql, ParameterVector^ params) {
+    return One(sql, copyParameters(params));
   }
 
-  IAsyncOperation<Rows^>^ Database::AllAsyncMap(Platform::String^ sql, ParameterMap^ params) {
-    return AllAsync(sql, params);
-  }
-
-  template <typename ParameterContainer>
-  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
-    return concurrency::create_async([=]() {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        return statement->All();
-      } catch (...) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
-  }
-
-  IAsyncAction^ Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
-    return EachAsync(sql, copyParameters(params), callback);
-  }
-
-  IAsyncAction^ Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
-    return EachAsync(sql, params, callback);
+  Row^ Database::OneMap(Platform::String^ sql, ParameterMap^ params) {
+    return One(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
+  Row^ Database::One(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->One();
+    } catch (...) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
+  }
+
+  Rows^ Database::AllVector(Platform::String^ sql, ParameterVector^ params) {
+    return All(sql, copyParameters(params));
+  }
+
+  Rows^ Database::AllMap(Platform::String^ sql, ParameterMap^ params) {
+    return All(sql, params);
+  }
+
+  template <typename ParameterContainer>
+  Rows^ Database::All(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->All();
+    } catch (...) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
+  }
+
+  void Database::EachVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
+    return Each(sql, copyParameters(params), callback);
+  }
+
+  void Database::EachMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
+    return Each(sql, params, callback);
+  }
+
+  template <typename ParameterContainer>
+  void Database::Each(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
     auto window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
     auto dispatcher = window->Dispatcher;
 
-    return concurrency::create_async([=]() {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        return statement->Each(callback, dispatcher);
-      } catch (...) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->Each(callback, dispatcher);
+    } catch (...) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
   bool Database::GetAutocommit() {
