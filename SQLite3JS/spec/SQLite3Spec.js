@@ -18,7 +18,7 @@
     waitsForPromise(
       SQLite3JS.openAsync(':memory:').then(function (newDb) {
         db = newDb;
-        return db.runAsync('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)').then(function () {
+        return db.runAsync('CREATE TABLE Item (name TEXT, price REAL, dateBought UNSIGNED BIG INT, id INT PRIMARY KEY)').then(function () {
           var promises = [
             db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Apple', 1.2, 1]),
             db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Orange', 2.5, 2]),
@@ -63,6 +63,22 @@
             expect(row.name).toEqual(name);
             expect(row.price).toEqual(null);
             expect(row.id).toEqual(null);
+          })
+      );
+    });
+
+    it('should support binding javascript date arguments', function () {
+      var name = 'Melon';
+      var dateBought = new Date()
+
+      waitsForPromise(
+        db.runAsync('INSERT INTO Item (name, dateBought) VALUES (?, ?)', [name, dateBought])
+          .then(function () {
+            return db.oneAsync('SELECT * FROM Item WHERE dateBought=?', [dateBought]);
+          })
+          .then(function (row) {
+            expect(row.name).toEqual(name);
+            expect(new Date(row.dateBought)).toEqual(dateBought);
           })
       );
     });

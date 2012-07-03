@@ -28,7 +28,7 @@ namespace SQLite3 {
     Platform::String^ ColumnName(int index);
 
     Platform::String^ ColumnText(int index);
-    int ColumnInt(int index);
+    int64 ColumnInt(int index);
     double ColumnDouble(int index);
 
     int BindText(int index, Platform::String^ val);
