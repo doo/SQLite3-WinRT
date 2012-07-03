@@ -28,7 +28,7 @@ namespace SQLite3 {
     int BindParameterCount();
     std::wstring BindParameterName(int index);
     int BindText(int index, Platform::String^ val);
-    int BindInt(int index, int val);
+    int BindInt(int index, int64 val);
     int BindDouble(int index, double val);
     int BindNull(int index);
 
@@ -40,7 +40,7 @@ namespace SQLite3 {
     int ColumnType(int index);
     Platform::String^ ColumnName(int index);
     Platform::String^ ColumnText(int index);
-    int ColumnInt(int index);
+    int64 ColumnInt(int index);
     double ColumnDouble(int index);
 
     void NotifyUnlock();
