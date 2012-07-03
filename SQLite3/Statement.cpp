@@ -54,11 +54,18 @@ namespace SQLite3 {
     }
   }
 
+  static inline uint64 FoundationTimeToUnixCompatible(Windows::Foundation::DateTime foundationTime){
+    return (foundationTime.UniversalTime/10000)-11644473600000;
+  }
+
   void Statement::BindParameter(int index, Platform::Object^ value) {
     if (value == nullptr) {
       sqlite3_bind_null(statement, index);
     } else {
       switch (Platform::Type::GetTypeCode(value->GetType())) {
+      case Platform::TypeCode::DateTime:
+        sqlite3_bind_int64(statement, index, FoundationTimeToUnixCompatible(static_cast<Windows::Foundation::DateTime>(value)));
+        break;
       case Platform::TypeCode::Double:
         sqlite3_bind_double(statement, index, static_cast<double>(value));
         break;
@@ -177,8 +184,8 @@ namespace SQLite3 {
     return ref new Platform::String(static_cast<const wchar_t*>(sqlite3_column_text16(statement, index)));
   }
 
-  int Statement::ColumnInt(int index) {
-    return sqlite3_column_int(statement, index);
+  int64 Statement::ColumnInt(int index) {
+    return sqlite3_column_int64(statement, index);
   }
 
   double Statement::ColumnDouble(int index) {
