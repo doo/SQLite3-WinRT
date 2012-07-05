@@ -210,7 +210,7 @@
 
             return item;
           }).then(function(groups) {
-            dataAdapter._groups = groups;
+            dataAdapter._groups = groups.filter(function (group) { return group.groupSize > 0; });
           });
         },
         getCount: function () {
