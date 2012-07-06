@@ -138,38 +138,50 @@
 
   ItemDataSource = WinJS.Class.derive(WinJS.UI.VirtualizedDataSource,
     function (db, sql, args, keyColumnName, groupKeyColumnName) {
-      var dataAdapter = {
+      this._dataAdapter = {
+        _sql: sql,
         getCount: function () {
-          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + sql + ')', args)
+          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + this._sql + ')', args)
             .then(function (row) { return row.cnt; });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
           var items,
               limit = countBefore + 1 + countAfter,
-              offset = requestIndex - countBefore;
+              offset = requestIndex - countBefore,
+              that = this;
 
-          return db.mapAsync(
-            'SELECT * FROM (' + sql + ') LIMIT ' + limit + ' OFFSET ' + offset,
-            function (row) {
-              var item = {
-                key: row[keyColumnName].toString(),
-                data: row
-              };
-              if (groupKeyColumnName) {
-                item.groupKey = row[groupKeyColumnName].toString();
-              }
-              return item;
-            }).then(function (items) {
-              return {
-                items: items,
-                offset: countBefore,
-                atEnd: items.length < limit
-              };
-            });
+          return this.getCount().then(function (totalCount) {
+            return db.mapAsync(
+              'SELECT * FROM (' + that._sql + ') LIMIT ' + limit + ' OFFSET ' + offset,
+              function (row) {
+                var item = {
+                  key: row[keyColumnName].toString(),
+                  data: row
+                };
+                if (groupKeyColumnName) {
+                  item.groupKey = row[groupKeyColumnName].toString();
+                }
+                return item;
+              }).then(function (items) {
+                return {
+                  items: items,
+                  offset: countBefore,
+                  totalCount: totalCount
+                };
+              })
+          });
+        },
+        setQuery: function (sql) {
+          this._sql = sql;
         }
       };
 
-      this._baseDataSourceConstructor(dataAdapter);
+      this._baseDataSourceConstructor(this._dataAdapter);
+    }, {
+      setQuery: function (sql) {
+        this._dataAdapter.setQuery(sql);
+        this.invalidateAll();
+      }
     }
   );
 
