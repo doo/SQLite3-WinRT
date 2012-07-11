@@ -60,7 +60,8 @@ namespace SQLite3 {
     if (value == nullptr) {
       sqlite3_bind_null(statement, index);
     } else {
-      switch (Platform::Type::GetTypeCode(value->GetType())) {
+      auto typeCode = Platform::Type::GetTypeCode(value->GetType());
+      switch (typeCode) {
       case Platform::TypeCode::DateTime:
         sqlite3_bind_int64(statement, index, FoundationTimeToUnixCompatible(static_cast<Windows::Foundation::DateTime>(value)));
         break;
@@ -70,6 +71,23 @@ namespace SQLite3 {
       case Platform::TypeCode::String:
         sqlite3_bind_text16(statement, index, static_cast<Platform::String^>(value)->Data(), -1, SQLITE_TRANSIENT);
         break;
+      case Platform::TypeCode::Boolean:
+        sqlite3_bind_int(statement, index, static_cast<Platform::Boolean>(value) ? 1 : 0);
+        break;
+      case Platform::TypeCode::Int8:
+      case Platform::TypeCode::Int16:
+      case Platform::TypeCode::Int32:
+      case Platform::TypeCode::UInt8:
+      case Platform::TypeCode::UInt16:
+      case Platform::TypeCode::UInt32:
+        sqlite3_bind_int(statement, index, static_cast<int>(value));
+        break;
+      case Platform::TypeCode::Int64:
+      case Platform::TypeCode::UInt64:
+        sqlite3_bind_int64(statement, index, static_cast<int64>(value));
+        break;
+      default: 
+        throw ref new Platform::InvalidArgumentException();
       }
     }
   }
