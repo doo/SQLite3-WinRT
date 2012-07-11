@@ -54,17 +54,42 @@ namespace SQLite3 {
     }
   }
 
+  static inline uint64 FoundationTimeToUnixCompatible(Windows::Foundation::DateTime foundationTime){
+    return (foundationTime.UniversalTime/10000)-11644473600000;
+  }
+
   void Statement::BindParameter(int index, Platform::Object^ value) {
     if (value == nullptr) {
       sqlite3_bind_null(statement, index);
     } else {
-      switch (Platform::Type::GetTypeCode(value->GetType())) {
+      auto typeCode = Platform::Type::GetTypeCode(value->GetType());
+      switch (typeCode) {
+      case Platform::TypeCode::DateTime:
+        sqlite3_bind_int64(statement, index, FoundationTimeToUnixCompatible(static_cast<Windows::Foundation::DateTime>(value)));
+        break;
       case Platform::TypeCode::Double:
         sqlite3_bind_double(statement, index, static_cast<double>(value));
         break;
       case Platform::TypeCode::String:
         sqlite3_bind_text16(statement, index, static_cast<Platform::String^>(value)->Data(), -1, SQLITE_TRANSIENT);
         break;
+      case Platform::TypeCode::Boolean:
+        sqlite3_bind_int(statement, index, static_cast<Platform::Boolean>(value) ? 1 : 0);
+        break;
+      case Platform::TypeCode::Int8:
+      case Platform::TypeCode::Int16:
+      case Platform::TypeCode::Int32:
+      case Platform::TypeCode::UInt8:
+      case Platform::TypeCode::UInt16:
+      case Platform::TypeCode::UInt32:
+        sqlite3_bind_int(statement, index, static_cast<int>(value));
+        break;
+      case Platform::TypeCode::Int64:
+      case Platform::TypeCode::UInt64:
+        sqlite3_bind_int64(statement, index, static_cast<int64>(value));
+        break;
+      default: 
+        throw ref new Platform::InvalidArgumentException();
       }
     }
   }
@@ -177,8 +202,8 @@ namespace SQLite3 {
     return ref new Platform::String(static_cast<const wchar_t*>(sqlite3_column_text16(statement, index)));
   }
 
-  int Statement::ColumnInt(int index) {
-    return sqlite3_column_int(statement, index);
+  int64 Statement::ColumnInt(int index) {
+    return sqlite3_column_int64(statement, index);
   }
 
   double Statement::ColumnDouble(int index) {

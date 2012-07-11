@@ -36,7 +36,7 @@ namespace SQLite3 {
     int ColumnType(int index);
     Platform::String^ ColumnName(int index);
     Platform::String^ ColumnText(int index);
-    int ColumnInt(int index);
+    int64 ColumnInt(int index);
     double ColumnDouble(int index);
 
   private:
