@@ -110,12 +110,9 @@ namespace SQLite3 {
 
   template <typename ParameterContainer>
   void Database::Each(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
-    auto window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
-    auto dispatcher = window->Dispatcher;
-
     try {
       StatementPtr statement = PrepareAndBind(sql, params);
-      return statement->Each(callback, dispatcher);
+      return statement->Each(callback);
     } catch (...) {
       lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
       throw;
