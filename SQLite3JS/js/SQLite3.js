@@ -167,7 +167,7 @@
                   offset: countBefore,
                   totalCount: totalCount
                 };
-              })
+              });
           });
         },
         setQuery: function (sql) {
