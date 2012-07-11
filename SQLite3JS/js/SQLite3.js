@@ -12,19 +12,18 @@
     return typeString.substring(8, typeString.length - 1).toLowerCase();
   }
 
-  function toObject(propertySet) {
-    function toObjectImpl(propertySet) {
-      var key, object = {};
+  function toObjectImpl(propertySet) {
+    var key, object = {}, iterator = propertySet.first();
 
-      for (key in propertySet) {
-        if (propertySet.hasOwnProperty(key)) {
-          object[key] = propertySet[key];
-        }
-      }
-
-      return object;
+    while (iterator.hasCurrent) {
+      object[iterator.current.key] = iterator.current.value;
+      iterator.moveNext();
     }
 
+    return object;
+  }
+
+  function toObject(propertySet) {
     return propertySet ? toObjectImpl(propertySet) : null;
   }
 
@@ -183,7 +182,7 @@
                   offset: countBefore,
                   totalCount: totalCount
                 };
-              })
+              });
           });
         },
         setNotificationHandler: function (notificationHandler) {
@@ -248,6 +247,7 @@
               items: dataAdapter._groups.slice(),
               offset: requestIndex,
               absoluteIndex: requestIndex,
+              totalCount: dataAdapter._groups.length,
               atStart: true,
               atEnd: true
             };
