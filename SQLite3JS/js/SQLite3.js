@@ -186,6 +186,12 @@
               })
           });
         },
+        setNotificationHandler: function (notificationHandler) {
+          this._notificationHandler = notificationHandler;
+        },
+        getNotificationHandler: function () {
+          return this._notificationHandler;
+        },
         setQuery: function (sql) {
           this._sql = sql;
         }
@@ -196,6 +202,9 @@
       setQuery: function (sql) {
         this._dataAdapter.setQuery(sql);
         this.invalidateAll();
+      },
+      getNotificationHandler: function () {
+        return this._dataAdapter.getNotificationHandler();
       }
     }
   );
@@ -248,10 +257,20 @@
           return dataAdapter._ensureGroupsAsync().then(function () {
             return dataAdapter.itemsFromIndex(dataAdapter._keyIndexMap[key], countBefore, countAfter);
           });
+        },
+        setNotificationHandler: function (notificationHandler) {
+          this._notificationHandler = notificationHandler;
+        },
+        getNotificationHandler: function () {
+          return this._notificationHandler;
         }
       };
-
+      this._dataAdapter = dataAdapter;
       this._baseDataSourceConstructor(dataAdapter);
+    }, {
+      getNotificationHandler: function () {
+        return this._dataAdapter.getNotificationHandler();
+      }
     }
   );
 
