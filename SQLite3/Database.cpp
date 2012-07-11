@@ -17,6 +17,8 @@ namespace SQLite3 {
   }
 
   IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
+    Windows::UI::Core::CoreDispatcher^ dispatcher = Windows::UI::Core::CoreWindow::GetForCurrentThread()->Dispatcher;
+
     return concurrency::create_async([=]() {
       sqlite3* sqlite;
       int ret = sqlite3_open16(dbPath->Data(), &sqlite);
@@ -28,16 +30,34 @@ namespace SQLite3 {
         throw ref new Platform::COMException(hresult);
       }
 
-      return ref new Database(sqlite);
+      return ref new Database(sqlite, dispatcher);
     });
   }
 
-  Database::Database(sqlite3* sqlite)
-    : sqlite(sqlite) {
+  Database::Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^ dispatcher)
+    : sqlite(sqlite),
+    dispatcher(dispatcher) {
+    sqlite3_update_hook(sqlite, updateHook, reinterpret_cast<void*>(this));
   }
 
   Database::~Database() {
     sqlite3_close(sqlite);
+  }
+
+  void Database::updateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowid) {
+    Database^ database = reinterpret_cast<Database^>(data);
+    database->OnChange(what, dbName, tableName, rowid);
+  }
+
+  void Database::OnChange(int what, char const* dbName, char const* tableName, sqlite3_int64 rowid) {
+    switch (what) {
+    case SQLITE_INSERT:
+      break;
+    case SQLITE_UPDATE:
+      break;
+    case SQLITE_DELETE:
+      break;
+    }
   }
 
   IAsyncAction^ Database::RunAsync(Platform::String^ sql, Parameters^ params) {
@@ -69,9 +89,6 @@ namespace SQLite3 {
 
   IAsyncAction^ Database::EachAsync(Platform::String^ sql, Parameters^ params, EachCallback^ callback) {
     auto safeParams = copyParameters(params);
-
-    auto window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
-    auto dispatcher = window->Dispatcher;
 
     return concurrency::create_async([=]() {
       StatementPtr statement = PrepareAndBind(sql, safeParams);

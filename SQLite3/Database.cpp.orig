@@ -1,0 +1,162 @@
+#include <collection.h>
+#include <ppltasks.h>
+#include <Winerror.h>
+
+#include "Database.h"
+#include "Statement.h"
+
+using Windows::UI::Core::CoreDispatcherPriority;
+using Windows::UI::Core::DispatchedHandler;
+
+namespace SQLite3 {
+  static SafeParameters copyParameters(Parameters^ params) {
+    SafeParameters paramsCopy;
+
+    if (params) {
+      std::copy(begin(params), end(params), std::back_inserter(paramsCopy));
+    }
+
+    return paramsCopy;
+  }
+
+  IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
+    auto dispatcher = Windows::UI::Core::CoreWindow::GetForCurrentThread()->Dispatcher;
+
+    return concurrency::create_async([=]() {
+      sqlite3* sqlite;
+      int ret = sqlite3_open16(dbPath->Data(), &sqlite);
+
+      if (ret != SQLITE_OK) {
+        sqlite3_close(sqlite);
+
+        HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
+        throw ref new Platform::COMException(hresult);
+      }
+
+      return ref new Database(sqlite, dispatcher);
+    });
+  }
+
+  Database::Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^ dispatcher)
+    : sqlite(sqlite),
+    dispatcher(dispatcher) {
+    sqlite3_progress_handler(sqlite, 100, progressCallback, (void*)this);
+    sqlite3_update_hook(sqlite, updateHook, (void*)this);
+  }
+
+  Database::~Database() {
+    sqlite3_close(sqlite);
+  }
+
+<<<<<<< Updated upstream
+  IAsyncAction^ Database::RunAsync(Platform::String^ sql, Parameters^ params) {
+    auto safeParams = copyParameters(params);
+=======
+  void Database::updateHook(void* data, int what, char const* databaseName, char const* tableName, sqlite3_int64 rowid) {
+    Database^ database = reinterpret_cast<Database^>(data);
+    database->OnChange(what, databaseName, tableName, rowid);
+  }
+
+  static Platform::String^ toPlatformString(const char* utf8String) {
+    DWORD numCharacters = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, nullptr, 0);
+    wchar_t* wideText = new wchar_t[numCharacters];
+    MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, wideText, numCharacters);
+    Platform::String^ result = ref new Platform::String(wideText);
+    delete [] wideText;
+    return result;
+  }
+  
+  void Database::OnChange(int what, char const* databaseName, char const* tableName, sqlite3_int64 rowid) {
+    ChangeEvent event;
+    event.Rowid = rowid;
+    event.TableName = toPlatformString(tableName);
+
+    DispatchedHandler^ handler;
+    switch (what) {
+    case SQLITE_INSERT:
+      handler = ref new DispatchedHandler([this, event]() {
+        inserted(event);
+      });
+      break;
+    case SQLITE_UPDATE:
+      handler = ref new DispatchedHandler([this, event]() {
+        updated(event);
+      });
+      break;
+    case SQLITE_DELETE:
+      handler = ref new DispatchedHandler([this, event]() {
+        deleted(event);
+      });
+      break;
+    }
+    dispatcher->RunAsync(CoreDispatcherPriority::Normal, handler);
+  }
+
+  int Database::progressCallback(void* data) {
+    Database^ database = reinterpret_cast<Database^>(data);
+    return database->OnProgress();
+  }
+    
+  int Database::OnProgress() {
+    dispatcher->RunAsync(CoreDispatcherPriority::Normal, ref new DispatchedHandler([this]() {
+      progress(this);
+    }));
+    return 0; 
+  }
+
+  IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return RunAsync(sql, copyParameters(params));
+  }
+
+  IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+    return RunAsync(sql, params);
+  }
+>>>>>>> Stashed changes
+
+    return concurrency::create_async([=]() {
+      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      statement->Run();
+    });
+  }
+
+  IAsyncOperation<Row^>^ Database::OneAsync(Platform::String^ sql, Parameters^ params) {
+    auto safeParams = copyParameters(params);
+
+    return concurrency::create_async([=]() {
+      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      return statement->One();
+    });
+  }
+
+  IAsyncOperation<Rows^>^ Database::AllAsync(Platform::String^ sql, Parameters^ params) {
+    auto safeParams = copyParameters(params);
+
+    return concurrency::create_async([=]() {
+      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      return statement->All();
+    });
+  }
+
+  IAsyncAction^ Database::EachAsync(Platform::String^ sql, Parameters^ params, EachCallback^ callback) {
+    auto safeParams = copyParameters(params);
+
+<<<<<<< Updated upstream
+    auto window = Windows::UI::Core::CoreWindow::GetForCurrentThread();
+    auto dispatcher = window->Dispatcher;
+
+=======
+  template <typename ParameterContainer>
+  IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
+>>>>>>> Stashed changes
+    return concurrency::create_async([=]() {
+      StatementPtr statement = PrepareAndBind(sql, safeParams);
+      return statement->Each(callback, dispatcher);
+    });
+  }
+
+  StatementPtr Database::PrepareAndBind(Platform::String^ sql, const SafeParameters& params) {
+    StatementPtr statement = Statement::Prepare(sqlite, sql);
+    statement->Bind(params);
+    return statement;
+  }
+}
