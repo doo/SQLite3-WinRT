@@ -49,15 +49,15 @@ namespace SQLite3 {
     sqlite3_close(sqlite);
   }
 
-  void Database::UpdateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowid) {
+  void Database::UpdateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
     Database^ database = reinterpret_cast<Database^>(data);
-    database->OnChange(what, dbName, tableName, rowid);
+    database->OnChange(what, dbName, tableName, rowId);
   }
 
-  void Database::OnChange(int what, char const* dbName, char const* tableName, sqlite3_int64 rowid) {
+  void Database::OnChange(int what, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
     DispatchedHandler^ handler;
     ChangeEvent event;
-    event.Rowid = rowid;
+    event.RowId = rowId;
     event.TableName = ToPlatformString(tableName);
 
     switch (what) {

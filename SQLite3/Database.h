@@ -6,7 +6,7 @@
 namespace SQLite3 {
   public value struct ChangeEvent {
     Platform::String^ TableName;
-    int64 Rowid;
+    int64 RowId;
   };
   
   public delegate void ChangeHandler(Platform::Object^ source, ChangeEvent event);
@@ -46,8 +46,8 @@ namespace SQLite3 {
     template <typename ParameterContainer>
     IAsyncAction^ EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 
-    static void __cdecl UpdateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowid);
-    void OnChange(int what, char const* dbName, char const* tableName, sqlite3_int64 rowid);
+    static void __cdecl UpdateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowId);
+    void OnChange(int what, char const* dbName, char const* tableName, sqlite3_int64 rowId);
 
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
