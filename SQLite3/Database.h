@@ -6,7 +6,7 @@
 namespace SQLite3 {
   public value struct ChangeEvent {
     Platform::String^ TableName;
-    __int64 Rowid;
+    int64 Rowid;
   };
   
   public delegate void ChangeHandler(Platform::Object^ source, ChangeEvent event);
