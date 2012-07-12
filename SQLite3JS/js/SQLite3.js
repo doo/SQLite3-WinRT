@@ -129,13 +129,16 @@
       },
       close: function () {
         connection.close();
-      }
+      },
+      addEventListener: connection.addEventListener.bind(connection),
+      removeEventListener: connection.removeEventListener.bind(connection)
     };
 
-    that.addEventListener = connection.addEventListener.bind(connection);
-    that.removeEventListener = connection.removeEventListener.bind(connection);
-    Object.defineProperties(that, WinJS.Utilities.createEventProperties('update', 'delete', 'insert'));
-        
+    Object.defineProperties(
+      that,
+      WinJS.Utilities.createEventProperties('update', 'delete', 'insert')
+    );
+
     return that;
   }
 
@@ -212,17 +215,17 @@
             firstItemIndex += item.groupSize;
 
             return item;
-          }).then(function(groups) {
+          }).then(function (groups) {
             dataAdapter._groups = groups;
           });
         },
         getCount: function () {
-          return dataAdapter._ensureGroupsAsync().then(function() {
+          return dataAdapter._ensureGroupsAsync().then(function () {
             return dataAdapter._groups.length;
           });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
-          return dataAdapter._ensureGroupsAsync().then(function() {
+          return dataAdapter._ensureGroupsAsync().then(function () {
             return {
               items: dataAdapter._groups.slice(),
               offset: requestIndex,
