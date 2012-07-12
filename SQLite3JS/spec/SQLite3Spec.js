@@ -1,11 +1,27 @@
 ﻿describe('SQLite3JS', function () {
+  function notNull(object) {
+    return object !== null;
+  }
+
+  function errorMessage(error) {
+    return error.message;
+  }
+
   function waitsForPromise(promise) {
     var done = false;
 
     promise.then(function () {
       done = true;
     }, function (error) {
-      currentJasmineSpec.fail(error);
+      var message;
+
+      if (error.constructor === Array) {
+        message = error.filter(notNull).map(errorMessage).join(', ');
+      } else {
+        message = errorMessage(error);
+      }
+
+      jasmine.getEnv().currentSpec.fail(message);
       done = true;
     });
 
@@ -18,7 +34,7 @@
     waitsForPromise(
       SQLite3JS.openAsync(':memory:').then(function (newDb) {
         db = newDb;
-        return db.runAsync('CREATE TABLE Item (name TEXT, price REAL, id INT PRIMARY KEY)').then(function () {
+        return db.runAsync('CREATE TABLE Item (name TEXT, price REAL, dateBought UNSIGNED BIG INT, id INT PRIMARY KEY)').then(function () {
           var promises = [
             db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Apple', 1.2, 1]),
             db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', ['Orange', 2.5, 2]),
@@ -66,6 +82,38 @@
           })
       );
     });
+
+    it('should support binding javascript date arguments', function () {
+      var name = 'Melon';
+      var dateBought = new Date()
+
+      waitsForPromise(
+        db.runAsync('INSERT INTO Item (name, dateBought) VALUES (?, ?)', [name, dateBought])
+          .then(function () {
+            return db.oneAsync('SELECT * FROM Item WHERE dateBought=?', [dateBought]);
+          })
+          .then(function (row) {
+            expect(row.name).toEqual(name);
+            expect(new Date(row.dateBought)).toEqual(dateBought);
+          })
+      );
+    });
+
+    it('should allow binding arguments by name', function () {
+      waitsForPromise(
+        db.runAsync(
+          'INSERT INTO Item (name, price, id) VALUES (:name, :price, :id)',
+          { name: 'Papaya', price: 5.2, id: 4 })
+          .then(function () {
+            return db.oneAsync(
+              'SELECT COUNT(*) AS cnt FROM Item WHERE price > :limit',
+              { limit: 5 });
+          })
+          .then(function (row) {
+            expect(row.cnt).toEqual(1);
+          })
+      );
+    });
   });
 
   describe('oneAsync()', function () {
@@ -99,7 +147,9 @@
   describe('allAsync()', function () {
     it('should return items with names ending on "e"', function () {
       waitsForPromise(
-        db.allAsync('SELECT * FROM Item WHERE name LIKE ? ORDER BY id ASC', ['%e'])
+        db.allAsync(
+          'SELECT * FROM Item WHERE name LIKE :pattern ORDER BY id ASC',
+          { pattern: '%e' })
           .then(function (rows) {
             expect(rows.length).toEqual(2);
             expect(rows[0].name).toEqual('Apple');
@@ -110,7 +160,7 @@
 
     it('should return empty array for empty queries', function () {
       waitsForPromise(
-        db.allAsync('SELECT * FROM Item WHERE id < 0').then(function (rows) {
+        db.allAsync('SELECT * FROM Item WHERE id < ?', [0]).then(function (rows) {
           expect(rows.length).toEqual(0);
         })
       );
@@ -118,19 +168,38 @@
   });
 
   describe('eachAsync()', function () {
-    it('should call a callback for each row', function () {
-      var calls = 0,
-          countCall = function () { calls += 1; };
+    var ids;
 
+    beforeEach(function () {
+      ids = [];
+      this.rememberId = function (row) { ids.push(row.id); };
+    });
+
+    it('should call a callback for each row', function () {
       waitsForPromise(
-        db.eachAsync('SELECT * FROM Item', countCall)
+        db.eachAsync('SELECT * FROM Item ORDER BY id', this.rememberId)
           .then(function () {
-            expect(calls).toEqual(3);
-            calls = 0;
-            return db.eachAsync('SELECT * FROM Item WHERE price > ?', [2], countCall);
+            expect(ids).toEqual([1, 2, 3]);
           })
+      );
+    });
+
+    it('should allow binding arguments', function () {
+      waitsForPromise(
+        db.eachAsync('SELECT * FROM Item WHERE price > ? ORDER BY id', [2], this.rememberId)
           .then(function () {
-            expect(calls).toEqual(2);
+            expect(ids).toEqual([2, 3]);
+          })
+      );
+    });
+
+    it('should allow binding arguments by name', function () {
+      waitsForPromise(
+        db.eachAsync(
+          'SELECT * FROM Item WHERE price < :max ORDER BY id',
+          { max: 3 },
+          this.rememberId).then(function () {
+            expect(ids).toEqual([1, 2]);
           })
       );
     });
@@ -151,12 +220,24 @@
     });
   });
 
+  describe('getLastInsertRowId()', function () {
+    it('should retrieve the id of the last inserted row', function () {
+      waitsForPromise(
+        db.runAsync("INSERT INTO Item (name) VALUES (?)", ['Ananas']).then(function () {
+          id = db.getLastInsertRowId();
+          expect(id).toEqual(4);
+        })
+      );
+    });
+  });
+
   describe('Error Handling', function () {
     it('should throw when creating an invalid database', function () {
+      var thisSpec = this;
+
       waitsForPromise(
         SQLite3JS.openAsync('invalid path').then(function (db) {
-          // The complete callback isn't supposed to be called.
-          expect(false).toBe(true);
+          thisSpec.fail('The error handler was not called.');
         }, function (error) {
           expect(error.resultCode).toEqual(SQLite3.ResultCode.cantOpen);
         })
@@ -164,10 +245,11 @@
     });
 
     it('should throw when executing an invalid statement', function () {
+      var thisSpec = this;
+
       waitsForPromise(
         db.runAsync('invalid sql').then(function () {
-          // The complete callback isn't supposed to be called.
-          expect(false).toBe(true);
+          thisSpec.fail('The error handler was not called.');
         }, function (error) {
           expect(error.resultCode).toEqual(SQLite3.ResultCode.error);
         })
@@ -242,7 +324,7 @@
           white: true,
           nomen: true,
           bitwise: true,
-          predef: ['SQLite3', 'WinJS']
+          predef: ['SQLite3', 'WinJS', 'Windows']
         };
         if (JSLINT(this.actual, options)) {
           return true;

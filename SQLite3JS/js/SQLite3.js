@@ -3,44 +3,99 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
+  // Alternative typeof implementation yielding more meaningful results,
+  // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
+  function type(obj) {
+    var typeString;
+
+    typeString = Object.prototype.toString.call(obj);
+    return typeString.substring(8, typeString.length - 1).toLowerCase();
+  }
+
+  function toObjectImpl(propertySet) {
+    var key, object = {}, iterator = propertySet.first();
+
+    while (iterator.hasCurrent) {
+      object[iterator.current.key] = iterator.current.value;
+      iterator.moveNext();
+    }
+
+    return object;
+  }
+
+  function toObject(propertySet) {
+    return propertySet ? toObjectImpl(propertySet) : null;
+  }
+
+  function toPropertySet(object) {
+    var key, propertySet = new Windows.Foundation.Collections.PropertySet();
+
+    for (key in object) {
+      if (object.hasOwnProperty(key)) {
+        propertySet.insert(key, object[key]);
+      }
+    }
+
+    return propertySet;
+  }
+
+  function prepareArgs(args) {
+    args = args || [];
+    return (args instanceof Array) ? args : toPropertySet(args);
+  }
+
   function wrapComException(comException) {
+    var resultCode = comException.number & 0xffff;
+
     return WinJS.Promise.wrapError({
-      message: 'SQLite Error',
-      resultCode: comException.number & 0xffff
+      message: 'SQLite Error (Result Code ' + resultCode + ')',
+      resultCode: resultCode
     });
   }
 
   function wrapDatabase(connection) {
+    function callNative(funcName, sql, args, callback) {
+      var preparedArgs = prepareArgs(args);
+
+      if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
+        return connection[funcName + "Map"](sql, preparedArgs, callback);
+      }
+
+      return connection[funcName + "Vector"](sql, preparedArgs, callback);
+    }
+
     var that = {
       runAsync: function (sql, args) {
-        return connection.runAsync(sql, args).then(function () {
+        return callNative('runAsync', sql, args).then(function () {
           return that;
         }, wrapComException);
       },
       oneAsync: function (sql, args) {
-        return connection.oneAsync(sql, args).then(function (row) {
-          return row;
+        return callNative('oneAsync', sql, args).then(function (row) {
+          return toObject(row);
         }, wrapComException);
       },
       allAsync: function (sql, args) {
-        return connection.allAsync(sql, args).then(function (rows) {
-          return rows;
+        return callNative('allAsync', sql, args).then(function (rows) {
+          return rows.map(toObject);
         }, wrapComException);
       },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
           callback = args;
-          args = null;
+          args = undefined;
         }
 
-        return connection.eachAsync(sql, args, callback).then(function () {
+        return callNative('eachAsync', sql, args, function (row) {
+          callback(toObject(row));
+        }).then(function () {
           return that;
         }, wrapComException);
       },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
           callback = args;
-          args = null;
+          args = undefined;
         }
 
         var results = [];
@@ -50,6 +105,9 @@
         }).then(function () {
           return results;
         });
+      },
+      getLastInsertRowId: function () {
+        return connection.getLastInsertRowId();
       },
       itemDataSource: function (sql, args, keyColumnName, groupKeyColumnName) {
         if (typeof args === 'string') {
@@ -77,44 +135,56 @@
     that.addEventListener = connection.addEventListener.bind(connection);
     that.removeEventListener = connection.removeEventListener.bind(connection);
     Object.defineProperties(that, WinJS.Utilities.createEventProperties('updated', 'deleted', 'inserted'));
-    
+        
     return that;
   }
 
   ItemDataSource = WinJS.Class.derive(WinJS.UI.VirtualizedDataSource,
     function (db, sql, args, keyColumnName, groupKeyColumnName) {
-      var dataAdapter = {
+      this._dataAdapter = {
+        _sql: sql,
         getCount: function () {
-          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + sql + ')', args)
+          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + this._sql + ')', args)
             .then(function (row) { return row.cnt; });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
           var items,
               limit = countBefore + 1 + countAfter,
-              offset = requestIndex - countBefore;
+              offset = requestIndex - countBefore,
+              that = this;
 
-          return db.mapAsync(
-            'SELECT * FROM (' + sql + ') LIMIT ' + limit + ' OFFSET ' + offset,
-            function (row) {
-              var item = {
-                key: row[keyColumnName].toString(),
-                data: row
-              };
-              if (groupKeyColumnName) {
-                item.groupKey = row[groupKeyColumnName].toString();
-              }
-              return item;
-            }).then(function (items) {
-              return {
-                items: items,
-                offset: countBefore,
-                atEnd: items.length < limit
-              };
-            });
+          return this.getCount().then(function (totalCount) {
+            return db.mapAsync(
+              'SELECT * FROM (' + that._sql + ') LIMIT ' + limit + ' OFFSET ' + offset,
+              function (row) {
+                var item = {
+                  key: row[keyColumnName].toString(),
+                  data: row
+                };
+                if (groupKeyColumnName) {
+                  item.groupKey = row[groupKeyColumnName].toString();
+                }
+                return item;
+              }).then(function (items) {
+                return {
+                  items: items,
+                  offset: countBefore,
+                  totalCount: totalCount
+                };
+              });
+          });
+        },
+        setQuery: function (sql) {
+          this._sql = sql;
         }
       };
 
-      this._baseDataSourceConstructor(dataAdapter);
+      this._baseDataSourceConstructor(this._dataAdapter);
+    }, {
+      setQuery: function (sql) {
+        this._dataAdapter.setQuery(sql);
+        this.invalidateAll();
+      }
     }
   );
 
