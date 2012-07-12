@@ -236,14 +236,17 @@
       var calledEventHandler = false;
 
       runs(function () {
-        db.addEventListener(eventName, function (event) {
-          expect(event.tableName).toEqual('Item');
-          expect(event.type).toEqual(eventName);
-          expect(event.rowId).toEqual(rowId);
-          calledEventHandler = true;
-        });
+        // make sure the event queue is drained of old events
+        window.setImmediate(function () {
+          db.addEventListener(eventName, function listener(event) {
+            expect(event.tableName).toEqual('Item');
+            expect(event.type).toEqual(eventName);
+            expect(event.rowId).toEqual(rowId);
+            calledEventHandler = true;
+          });
 
-        callback();
+          callback();
+        });
       });
 
       waitsFor(function () { return calledEventHandler === true; });
