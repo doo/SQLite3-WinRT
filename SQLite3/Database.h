@@ -4,6 +4,13 @@
 #include "Common.h"
 
 namespace SQLite3 {
+  public value struct ChangeEvent {
+    Platform::String^ TableName;
+    int64 RowId;
+  };
+  
+  public delegate void ChangeHandler(Platform::Object^ source, ChangeEvent event);
+  
   public ref class Database sealed {
   public:
     static Database^ Open(Platform::String^ dbPath);
@@ -24,8 +31,12 @@ namespace SQLite3 {
     long long GetLastInsertRowId();
     Platform::String^ GetLastError();
 
+    event ChangeHandler^ Insert;
+    event ChangeHandler^ Update;
+    event ChangeHandler^ Delete;
+
   private:
-    Database(sqlite3* sqlite);
+    Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^);
 
     template <typename ParameterContainer>
     StatementPtr PrepareAndBind(Platform::String^ sql, ParameterContainer params);
@@ -39,6 +50,10 @@ namespace SQLite3 {
     template <typename ParameterContainer>
     void Each(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 
+    static void __cdecl UpdateHook(void* data, int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
+    void OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
+
+    Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
     std::wstring lastErrorMsg;
   };

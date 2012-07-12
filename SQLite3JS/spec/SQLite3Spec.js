@@ -231,6 +231,45 @@
     });
   });
 
+  describe('Events', function () {
+    function expectEvent(eventName, rowId, callback) {
+      var calledEventHandler = false;
+
+      runs(function () {
+        db.addEventListener(eventName, function (event) {
+          expect(event.tableName).toEqual('Item');
+          expect(event.type).toEqual(eventName);
+          expect(event.rowId).toEqual(rowId);
+          calledEventHandler = true;
+        });
+
+        callback();
+      });
+
+      waitsFor(function () { return calledEventHandler === true; });
+    };
+
+    it('should fire oninsert', function () {
+      expectEvent('insert', 4, function () {
+        db.runAsync("INSERT INTO Item (name) VALUES (?)", ['Ananas']);
+      });
+    });
+
+    it('should fire onupdate', function () {
+      expectEvent('update', 2, function () {
+        db.runAsync(
+          "UPDATE Item SET price = :newPrice WHERE name = :name",
+          { name: 'Orange', newPrice: 0.9 });
+      });
+    });
+
+    it('should fire ondelete', function () {
+      expectEvent('delete', 1, function () {
+        db.runAsync("DELETE FROM Item WHERE name = ?", ['Apple']);
+      });
+    });
+  });
+
   describe('Concurrency Handling', function () {
     it('Should support two concurrent connections', function () {
       var dbFilename = Windows.Storage.ApplicationData.current.temporaryFolder.path + "\\concurrencyTest.sqlite";
