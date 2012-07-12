@@ -134,7 +134,7 @@
 
     that.addEventListener = connection.addEventListener.bind(connection);
     that.removeEventListener = connection.removeEventListener.bind(connection);
-    Object.defineProperties(that, WinJS.Utilities.createEventProperties('updated', 'deleted', 'inserted'));
+    Object.defineProperties(that, WinJS.Utilities.createEventProperties('update', 'delete', 'insert'));
         
     return that;
   }

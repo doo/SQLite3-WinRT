@@ -27,9 +27,9 @@ namespace SQLite3 {
 
     long long GetLastInsertRowId();
 
-    event ChangeHandler^ inserted;
-    event ChangeHandler^ updated;
-    event ChangeHandler^ deleted;
+    event ChangeHandler^ Insert;
+    event ChangeHandler^ Update;
+    event ChangeHandler^ Delete;
 
   private:
     Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^);

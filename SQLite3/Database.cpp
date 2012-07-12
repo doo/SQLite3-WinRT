@@ -63,17 +63,17 @@ namespace SQLite3 {
     switch (action) {
     case SQLITE_INSERT:
       handler = ref new DispatchedHandler([this, event]() {
-        inserted(this, event);
+        Insert(this, event);
       });
       break;
     case SQLITE_UPDATE:
       handler = ref new DispatchedHandler([this, event]() {
-        updated(this, event);
+        Update(this, event);
       });
       break;
     case SQLITE_DELETE:
       handler = ref new DispatchedHandler([this, event]() {
-        deleted(this, event);
+        Delete(this, event);
       });
       break;
     }
