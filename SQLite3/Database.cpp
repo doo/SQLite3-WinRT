@@ -11,15 +11,6 @@ using Windows::UI::Core::CoreWindow;
 using Windows::UI::Core::DispatchedHandler;
 
 namespace SQLite3 {
-  static Platform::String^ toPlatformString(const char* utf8String) {
-    DWORD numCharacters = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, nullptr, 0);
-    wchar_t* wideText = new wchar_t[numCharacters];
-    MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, wideText, numCharacters);
-    Platform::String^ result = ref new Platform::String(wideText);
-    delete[] wideText;
-    return result;
-  }
-
   static SafeParameterVector copyParameters(ParameterVector^ params) {
     SafeParameterVector paramsCopy;
 

@@ -6,15 +6,6 @@
 #include "Database.h"
 
 namespace SQLite3 {
-  static std::wstring toUtf16(const char* utf8String) {
-    DWORD numCharacters = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, nullptr, 0);
-    auto wideText = new std::wstring::value_type[numCharacters];
-    MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, wideText, numCharacters);
-    std::wstring result(wideText);
-    delete[] wideText;
-    return result;
-  }
-
   StatementPtr Statement::Prepare(sqlite3* sqlite, Platform::String^ sql) {
     sqlite3_stmt* statement;
     int ret = sqlite3_prepare16(sqlite, sql->Data(), -1, &statement, 0);
@@ -99,7 +90,7 @@ namespace SQLite3 {
   }
 
   std::wstring Statement::BindParameterName(int index) {
-    return toUtf16(sqlite3_bind_parameter_name(statement, index));
+    return toWString(sqlite3_bind_parameter_name(statement, index));
   }
 
   int Statement::BindText(int index, Platform::String^ val) {
