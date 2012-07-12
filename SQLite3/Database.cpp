@@ -11,7 +11,7 @@ using Windows::UI::Core::CoreWindow;
 using Windows::UI::Core::DispatchedHandler;
 
 namespace SQLite3 {
-  static SafeParameterVector copyParameters(ParameterVector^ params) {
+  static SafeParameterVector CopyParameters(ParameterVector^ params) {
     SafeParameterVector paramsCopy;
 
     if (params) {
@@ -42,14 +42,14 @@ namespace SQLite3 {
   Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
     : sqlite(sqlite),
     dispatcher(dispatcher) {
-    sqlite3_update_hook(sqlite, updateHook, reinterpret_cast<void*>(this));
+    sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
   }
 
   Database::~Database() {
     sqlite3_close(sqlite);
   }
 
-  void Database::updateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowid) {
+  void Database::UpdateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowid) {
     Database^ database = reinterpret_cast<Database^>(data);
     database->OnChange(what, dbName, tableName, rowid);
   }
@@ -58,7 +58,7 @@ namespace SQLite3 {
     DispatchedHandler^ handler;
     ChangeEvent event;
     event.Rowid = rowid;
-    event.TableName = toPlatformString(tableName);
+    event.TableName = ToPlatformString(tableName);
 
     switch (what) {
     case SQLITE_INSERT:
@@ -83,7 +83,7 @@ namespace SQLite3 {
   }
 
   IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return RunAsync(sql, copyParameters(params));
+    return RunAsync(sql, CopyParameters(params));
   }
 
   IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
@@ -99,7 +99,7 @@ namespace SQLite3 {
   }
 
   IAsyncOperation<Row^>^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return OneAsync(sql, copyParameters(params));
+    return OneAsync(sql, CopyParameters(params));
   }
 
   IAsyncOperation<Row^>^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
@@ -115,7 +115,7 @@ namespace SQLite3 {
   }
 
   IAsyncOperation<Rows^>^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return AllAsync(sql, copyParameters(params));
+    return AllAsync(sql, CopyParameters(params));
   }
 
   IAsyncOperation<Rows^>^ Database::AllAsyncMap(Platform::String^ sql, ParameterMap^ params) {
@@ -131,7 +131,7 @@ namespace SQLite3 {
   }
 
   IAsyncAction^ Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
-    return EachAsync(sql, copyParameters(params), callback);
+    return EachAsync(sql, CopyParameters(params), callback);
   }
   IAsyncAction^ Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
     return EachAsync(sql, params, callback);

@@ -21,6 +21,6 @@ namespace SQLite3 {
   using Windows::Foundation::IAsyncAction;
   using Windows::Foundation::IAsyncOperation;
 
-  std::wstring toWString(const char* utf8String);
-  Platform::String^ toPlatformString(const char* utf8String);
+  std::wstring ToWString(const char* utf8String);
+  Platform::String^ ToPlatformString(const char* utf8String);
 }

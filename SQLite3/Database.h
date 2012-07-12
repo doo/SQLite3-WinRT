@@ -46,7 +46,7 @@ namespace SQLite3 {
     template <typename ParameterContainer>
     IAsyncAction^ EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 
-    static void __cdecl updateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowid);
+    static void __cdecl UpdateHook(void* data, int what, char const* dbName, char const* tableName, sqlite3_int64 rowid);
     void OnChange(int what, char const* dbName, char const* tableName, sqlite3_int64 rowid);
 
     Windows::UI::Core::CoreDispatcher^ dispatcher;

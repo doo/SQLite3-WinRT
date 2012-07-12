@@ -90,7 +90,7 @@ namespace SQLite3 {
   }
 
   std::wstring Statement::BindParameterName(int index) {
-    return toWString(sqlite3_bind_parameter_name(statement, index));
+    return ToWString(sqlite3_bind_parameter_name(statement, index));
   }
 
   int Statement::BindText(int index, Platform::String^ val) {
