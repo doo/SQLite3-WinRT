@@ -24,6 +24,10 @@ namespace SQLite3 {
     Row^ OneMap(Platform::String^ sql, ParameterMap^ params);
     Rows^ AllVector(Platform::String^ sql, ParameterVector^ params);
     Rows^ AllMap(Platform::String^ sql, ParameterMap^ params);
+    Windows::Foundation::Collections::IVectorView<Platform::String^>^ AllJSONMap(Platform::String^ sql, ParameterMap^ params);
+    Windows::Foundation::Collections::IVectorView<Platform::String^>^ AllJSONVector(Platform::String^ sql, ParameterVector^ params);
+    Platform::String^ AllJSONStringMap(Platform::String^ sql, ParameterMap^ params);
+    Platform::String^ AllJSONStringVector(Platform::String^ sql, ParameterVector^ params);
     void EachVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
     void EachMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
@@ -47,6 +51,10 @@ namespace SQLite3 {
     Row^ One(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
     Rows^ All(Platform::String^ sql, ParameterContainer params);
+    template <typename ParameterContainer>
+    Windows::Foundation::Collections::IVectorView<Platform::String^>^ AllJSON(Platform::String^ sql, ParameterContainer params);
+    template <typename ParameterContainer>
+    Platform::String^ AllJSONString(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
     void Each(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 

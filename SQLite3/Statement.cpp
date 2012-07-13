@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <collection.h>
 #include <ppltasks.h>
-
+#include <sstream>
 #include "Statement.h"
 #include "Database.h"
 
@@ -115,6 +115,27 @@ namespace SQLite3 {
     return (Step() == SQLITE_ROW) ? GetRow() : nullptr;
   }
 
+  Windows::Foundation::Collections::IVectorView<Platform::String^>^ Statement::AllAsJSON() {
+    auto rows = ref new Platform::Collections::Vector<Platform::String^>();
+    while (Step() == SQLITE_ROW) {
+      rows->Append(GetRowAsJSON());
+    }
+    return rows->GetView();
+  }
+
+  Platform::String^ Statement::AllAsJSONString() {
+    std::wostringstream result;
+    result << L"[";
+    while (Step() == SQLITE_ROW) {
+      GetRowAsJSON(result);
+      result << L",";
+    }
+    std::streamoff pos = result.tellp();
+    result.seekp(pos-1);
+    result << L"]";
+    return ref new Platform::String(result.str().c_str());
+  }
+
   Rows^ Statement::All() {
     auto rows = ref new Platform::Collections::Vector<Row^>();
 
@@ -166,6 +187,46 @@ namespace SQLite3 {
 
   bool Statement::ReadOnly() const {
     return sqlite3_stmt_readonly(statement) != 0;
+  }
+
+  Platform::String^ Statement::GetRowAsJSON() {
+    std::basic_ostringstream<WCHAR> row;
+    row << L"{";
+    int columnCount = ColumnCount();
+    for (int i = 0; i < columnCount; ++i) {
+      auto colName = static_cast<const wchar_t*>(sqlite3_column_name16(statement, i));
+      auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));
+      row << L"\"" << colName  << L"\":";
+      if (colValue) {
+        row << L"\"" << colValue << L"\"";
+      } else {
+        row << L"null";
+      }
+      row << L",";
+    }
+    std::streamoff pos = row.tellp();
+    row.seekp(pos - 1l);
+    row << L"}";
+    return ref new Platform::String(row.str().c_str());
+  }
+
+  void Statement::GetRowAsJSON(std::wostringstream& row) {
+    row << L"{";
+    int columnCount = ColumnCount();
+    for (int i = 0; i < columnCount; ++i) {
+      auto colName = static_cast<const wchar_t*>(sqlite3_column_name16(statement, i));
+      auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));
+      row << L"\"" << colName  << L"\":";
+      if (colValue) {
+        row << L"\"" << colValue << L"\"";
+      } else {
+        row << L"null";
+      }
+      row << L",";
+    }
+    std::streamoff pos = row.tellp();
+    row.seekp(pos - 1l);
+    row << L"}";
   }
 
   Row^ Statement::GetRow() {

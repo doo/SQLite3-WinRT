@@ -13,10 +13,11 @@
   }
 
   function toObjectImpl(propertySet) {
-    var key, object = {}, iterator = propertySet.first();
+    var key, curElem, object = {}, iterator = propertySet.first();
 
-    while (iterator.hasCurrent) {
-      object[iterator.current.key] = iterator.current.value;
+    while (iterator.hasCurrent === true) {
+      curElem = iterator.current;
+      object[curElem.key] = curElem.value;
       iterator.moveNext();
     }
 
@@ -84,6 +85,16 @@
       allAsync: function (sql, args) {
         return callNative('all', sql, args).then(function (rows) {
           return rows.map(toObject);
+        }, wrapComException);
+      },
+      allJSONAsync: function (sql, args) {
+        return callNative('allJSON', sql, args).then(function (rows) {
+          return rows.map(JSON.parse);
+        }, wrapComException);
+      },
+      allJSONStringAsync: function (sql, args) {
+        return callNative('allJSONString', sql, args).then(function (string) {
+          return JSON.parse(string);
         }, wrapComException);
       },
       eachAsync: function (sql, args, callback) {
