@@ -12,22 +12,6 @@
     return typeString.substring(8, typeString.length - 1).toLowerCase();
   }
 
-  function toObjectImpl(propertySet) {
-    var key, curElem, object = {}, iterator = propertySet.first();
-
-    while (iterator.hasCurrent === true) {
-      curElem = iterator.current;
-      object[curElem.key] = curElem.value;
-      iterator.moveNext();
-    }
-
-    return object;
-  }
-
-  function toObject(propertySet) {
-    return propertySet ? toObjectImpl(propertySet) : null;
-  }
-
   function toPropertySet(object) {
     var key, propertySet = new Windows.Foundation.Collections.PropertySet();
 
@@ -68,7 +52,6 @@
       } catch (e) {
         return WinJS.Promise.wrapError(e);
       }
-
     }
 
     var that = {
@@ -79,22 +62,12 @@
       },
       oneAsync: function (sql, args) {
         return callNative('one', sql, args).then(function (row) {
-          return toObject(row);
+          return row ? JSON.parse(row) : null;
         }, wrapComException);
       },
       allAsync: function (sql, args) {
         return callNative('all', sql, args).then(function (rows) {
-          return rows.map(toObject);
-        }, wrapComException);
-      },
-      allJSONAsync: function (sql, args) {
-        return callNative('allJSON', sql, args).then(function (rows) {
-          return rows.map(JSON.parse);
-        }, wrapComException);
-      },
-      allJSONStringAsync: function (sql, args) {
-        return callNative('allJSONString', sql, args).then(function (string) {
-          return JSON.parse(string);
+          return rows ? JSON.parse(rows) : null;
         }, wrapComException);
       },
       eachAsync: function (sql, args, callback) {
@@ -104,7 +77,7 @@
         }
 
         return callNative('each', sql, args, function (row) {
-          callback(toObject(row));
+          callback(JSON.parse(row));
         }).then(function () {
           return that;
         }, wrapComException);

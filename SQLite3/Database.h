@@ -20,14 +20,10 @@ namespace SQLite3 {
 
     void RunVector(Platform::String^ sql, ParameterVector^ params);
     void RunMap(Platform::String^ sql, ParameterMap^ params);
-    Row^ OneVector(Platform::String^ sql, ParameterVector^ params);
-    Row^ OneMap(Platform::String^ sql, ParameterMap^ params);
-    Rows^ AllVector(Platform::String^ sql, ParameterVector^ params);
-    Rows^ AllMap(Platform::String^ sql, ParameterMap^ params);
-    Windows::Foundation::Collections::IVectorView<Platform::String^>^ AllJSONMap(Platform::String^ sql, ParameterMap^ params);
-    Windows::Foundation::Collections::IVectorView<Platform::String^>^ AllJSONVector(Platform::String^ sql, ParameterVector^ params);
-    Platform::String^ AllJSONStringMap(Platform::String^ sql, ParameterMap^ params);
-    Platform::String^ AllJSONStringVector(Platform::String^ sql, ParameterVector^ params);
+    Platform::String^ OneVector(Platform::String^ sql, ParameterVector^ params);
+    Platform::String^ OneMap(Platform::String^ sql, ParameterMap^ params);
+    Platform::String^ AllMap(Platform::String^ sql, ParameterMap^ params);
+    Platform::String^ AllVector(Platform::String^ sql, ParameterVector^ params);
     void EachVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
     void EachMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
@@ -48,13 +44,9 @@ namespace SQLite3 {
     template <typename ParameterContainer>
     void Run(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    Row^ One(Platform::String^ sql, ParameterContainer params);
+    Platform::String^ One(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    Rows^ All(Platform::String^ sql, ParameterContainer params);
-    template <typename ParameterContainer>
-    Windows::Foundation::Collections::IVectorView<Platform::String^>^ AllJSON(Platform::String^ sql, ParameterContainer params);
-    template <typename ParameterContainer>
-    Platform::String^ AllJSONString(Platform::String^ sql, ParameterContainer params);
+    Platform::String^ All(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
     void Each(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 

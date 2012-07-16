@@ -111,44 +111,39 @@ namespace SQLite3 {
     Step();
   }
 
-  Row^ Statement::One() {
-    return (Step() == SQLITE_ROW) ? GetRow() : nullptr;
-  }
-
-  Windows::Foundation::Collections::IVectorView<Platform::String^>^ Statement::AllAsJSON() {
-    auto rows = ref new Platform::Collections::Vector<Platform::String^>();
-    while (Step() == SQLITE_ROW) {
-      rows->Append(GetRowAsJSON());
+  Platform::String^ Statement::One() {
+    std::wostringstream result;
+    if (Step() == SQLITE_ROW) {
+      GetRow(result);
+      return ref new Platform::String(result.str().c_str());
+    } else {
+      return nullptr;
     }
-    return rows->GetView();
   }
 
-  Platform::String^ Statement::AllAsJSONString() {
+  Platform::String^ Statement::All() {
     std::wostringstream result;
     result << L"[";
-    while (Step() == SQLITE_ROW) {
-      GetRowAsJSON(result);
+    auto stepResult = Step();
+    bool hasData = (stepResult == SQLITE_ROW);
+    while (stepResult == SQLITE_ROW) {
+      GetRow(result);
       result << L",";
+      stepResult = Step();
     }
-    std::streamoff pos = result.tellp();
-    result.seekp(pos-1);
+    if (hasData) {
+      std::streamoff pos = result.tellp();
+      result.seekp(pos-1);
+    }
     result << L"]";
     return ref new Platform::String(result.str().c_str());
   }
 
-  Rows^ Statement::All() {
-    auto rows = ref new Platform::Collections::Vector<Row^>();
-
-    while (Step() == SQLITE_ROW) {
-      rows->Append(GetRow());
-    }
-  
-    return rows->GetView();
-  }
-
   void Statement::Each(EachCallback^ callback) {
     while (Step() == SQLITE_ROW) {
-      callback(GetRow());
+      std::wostringstream output;
+      GetRow(output);
+      callback(ref new Platform::String(output.str().c_str()));
     }
   }
 
@@ -189,56 +184,31 @@ namespace SQLite3 {
     return sqlite3_stmt_readonly(statement) != 0;
   }
 
-  Platform::String^ Statement::GetRowAsJSON() {
-    std::basic_ostringstream<WCHAR> row;
-    row << L"{";
+  void Statement::GetRow(std::wostringstream& outstream) {
+    outstream << L"{";
     int columnCount = ColumnCount();
     for (int i = 0; i < columnCount; ++i) {
       auto colName = static_cast<const wchar_t*>(sqlite3_column_name16(statement, i));
       auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));
-      row << L"\"" << colName  << L"\":";
-      if (colValue) {
-        row << L"\"" << colValue << L"\"";
-      } else {
-        row << L"null";
+      auto colType = ColumnType(i);
+      outstream << L"\"" << colName  << L"\":";
+      switch (colType) {
+      case SQLITE_TEXT:
+        outstream << L"\"" << colValue << L"\"";
+        break;
+      case SQLITE_INTEGER:
+      case SQLITE_FLOAT:
+        outstream << colValue;
+        break;
+      case SQLITE_NULL:
+        outstream << L"null";
+        break;
       }
-      row << L",";
+      outstream << L",";
     }
-    std::streamoff pos = row.tellp();
-    row.seekp(pos - 1l);
-    row << L"}";
-    return ref new Platform::String(row.str().c_str());
-  }
-
-  void Statement::GetRowAsJSON(std::wostringstream& row) {
-    row << L"{";
-    int columnCount = ColumnCount();
-    for (int i = 0; i < columnCount; ++i) {
-      auto colName = static_cast<const wchar_t*>(sqlite3_column_name16(statement, i));
-      auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));
-      row << L"\"" << colName  << L"\":";
-      if (colValue) {
-        row << L"\"" << colValue << L"\"";
-      } else {
-        row << L"null";
-      }
-      row << L",";
-    }
-    std::streamoff pos = row.tellp();
-    row.seekp(pos - 1l);
-    row << L"}";
-  }
-
-  Row^ Statement::GetRow() {
-    auto row = ref new Platform::Collections::Map<Platform::String^, Platform::Object^>();
-
-    int columnCount = ColumnCount();
-    for (int i = 0 ; i < columnCount; ++i) {
-      auto name = ColumnName(i);
-      row->Insert(name, GetColumn(i));
-    }
-
-    return row->GetView();
+    std::streamoff pos = outstream.tellp();
+    outstream.seekp(pos - 1l);
+    outstream << L"}";
   }
 
   Platform::Object^ Statement::GetColumn(int index) {

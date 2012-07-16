@@ -15,10 +15,8 @@ namespace SQLite3 {
     void Bind(ParameterMap^ params);
 
     void Run();
-    Row^ One();
-    Rows^ All();
-    Windows::Foundation::Collections::IVectorView<Platform::String^>^ AllAsJSON();
-    Platform::String^ AllAsJSONString();
+    Platform::String^ One();
+    Platform::String^ All();
     void Each(EachCallback^ callback);
 
     bool ReadOnly() const;
@@ -35,9 +33,7 @@ namespace SQLite3 {
     int BindNull(int index);
 
     int Step();
-    Row^ GetRow();
-    Platform::String^ GetRowAsJSON();
-    void GetRowAsJSON(std::wostringstream& row);
+    void GetRow(std::wostringstream& row);
     Platform::Object^ GetColumn(int index);
 
     int ColumnCount();

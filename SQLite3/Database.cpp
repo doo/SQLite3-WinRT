@@ -104,16 +104,16 @@ namespace SQLite3 {
     }
   }
 
-  Row^ Database::OneVector(Platform::String^ sql, ParameterVector^ params) {
+  Platform::String^ Database::OneVector(Platform::String^ sql, ParameterVector^ params) {
     return One(sql, CopyParameters(params));
   }
 
-  Row^ Database::OneMap(Platform::String^ sql, ParameterMap^ params) {
+  Platform::String^ Database::OneMap(Platform::String^ sql, ParameterMap^ params) {
     return One(sql, params);
   }
 
   template <typename ParameterContainer>
-  Row^ Database::One(Platform::String^ sql, ParameterContainer params) {
+  Platform::String^ Database::One(Platform::String^ sql, ParameterContainer params) {
     try {
       StatementPtr statement = PrepareAndBind(sql, params);
       return statement->One();
@@ -123,54 +123,16 @@ namespace SQLite3 {
     }
   }
 
-  Rows^ Database::AllVector(Platform::String^ sql, ParameterVector^ params) {
-    return All(sql, CopyParameters(params));
-  }
-
-  Rows^ Database::AllMap(Platform::String^ sql, ParameterMap^ params) {
+  Platform::String^ Database::AllMap(Platform::String^ sql, ParameterMap^ params) {
     return All(sql, params);
   }
 
-  Windows::Foundation::Collections::IVectorView<Platform::String^>^ Database::AllJSONMap(Platform::String^ sql, ParameterMap^ params) {
-    return AllJSON(sql, params);
-  }
-
-  Windows::Foundation::Collections::IVectorView<Platform::String^>^ Database::AllJSONVector(Platform::String^ sql, ParameterVector^ params) {
-    return AllJSON(sql, CopyParameters(params));
-  }
-
-  Platform::String^ Database::AllJSONStringMap(Platform::String^ sql, ParameterMap^ params) {
-    return AllJSONString(sql, params);
-  }
-
-  Platform::String^ Database::AllJSONStringVector(Platform::String^ sql, ParameterVector^ params) {
-    return AllJSONString(sql, CopyParameters(params));
+  Platform::String^ Database::AllVector(Platform::String^ sql, ParameterVector^ params) {
+    return All(sql, CopyParameters(params));
   }
 
   template <typename ParameterContainer>
-  Windows::Foundation::Collections::IVectorView<Platform::String^>^ Database::AllJSON(Platform::String^ sql, ParameterContainer params) {
-    try {
-      StatementPtr statement = PrepareAndBind(sql, params);
-      return statement->AllAsJSON();
-    } catch (...) {
-      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-      throw;
-    }
-  }
-
-  template <typename ParameterContainer>
-  Platform::String^ Database::AllJSONString(Platform::String^ sql, ParameterContainer params) {
-    try {
-      StatementPtr statement = PrepareAndBind(sql, params);
-      return statement->AllAsJSONString();
-    } catch (...) {
-      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-      throw;
-    }
-  }
-
-  template <typename ParameterContainer>
-  Rows^ Database::All(Platform::String^ sql, ParameterContainer params) {
+  Platform::String^ Database::All(Platform::String^ sql, ParameterContainer params) {
     try {
       StatementPtr statement = PrepareAndBind(sql, params);
       return statement->All();
