@@ -184,6 +184,32 @@ namespace SQLite3 {
     return sqlite3_stmt_readonly(statement) != 0;
   }
 
+  void writeEscaped(std::wstring const& s, std::wostringstream& out) {
+    out << '"';
+    for (std::wstring::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
+      wchar_t c = *i;
+      if (' ' <= c && c <= '~' && c != '\\' && c != '"') {
+        out << *i;
+      }
+      else {
+        out << '\\';
+        switch(c) {
+        case '"':  out << '"';  break;
+        case '\\': out << '\\'; break;
+        case '\t': out << 't';  break;
+        case '\r': out << 'r';  break;
+        case '\n': out << 'n';  break;
+        default:
+          char const* const hexdig = "0123456789ABCDEF";
+          out << 'x';
+          out << hexdig[c >> 4];
+          out << hexdig[c & 0xF];
+        }
+      }
+    }
+    out << '"';
+  }
+
   void Statement::GetRow(std::wostringstream& outstream) {
     outstream << L"{";
     int columnCount = ColumnCount();
@@ -194,7 +220,7 @@ namespace SQLite3 {
       outstream << L"\"" << colName  << L"\":";
       switch (colType) {
       case SQLITE_TEXT:
-        outstream << L"\"" << colValue << L"\"";
+        writeEscaped(colValue, outstream);
         break;
       case SQLITE_INTEGER:
       case SQLITE_FLOAT:

@@ -142,6 +142,20 @@
         })
       );
     });
+
+    it('should support special characters in strings', function () {
+      var rowToInsert = {
+        name: "Foo\nBar'n"
+      };
+      waitsForPromise(
+        db.runAsync('INSERT INTO Item(name) VALUES(:name)', rowToInsert).then(function () {
+          var id = db.getLastInsertRowId();
+          return db.oneAsync('SELECT * FROM Item WHERE rowId=?', [id]);
+        }).then(function (result) {
+          expect(result.name).toEqual("Foo\nBar'n");
+        })
+      );
+    });
   });
 
   describe('allAsync()', function () {
