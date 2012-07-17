@@ -36,7 +36,7 @@ namespace SQLite3 {
     event ChangeHandler^ Delete;
 
   private:
-    Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^);
+    Database(sqlite3* sqlite);
 
     template <typename ParameterContainer>
     StatementPtr PrepareAndBind(Platform::String^ sql, ParameterContainer params);

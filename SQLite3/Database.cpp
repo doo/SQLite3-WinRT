@@ -21,10 +21,8 @@ namespace SQLite3 {
   }
 
   Database^ Database::Open(Platform::String^ dbPath) {
-    CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
-
     sqlite3* sqlite;
-      
+
     int ret = sqlite3_open16(dbPath->Data(), &sqlite);
 
     if (ret != SQLITE_OK) {
@@ -32,7 +30,7 @@ namespace SQLite3 {
       throwSQLiteError(ret);
     }
 
-      return ref new Database(sqlite, dispatcher);
+    return ref new Database(sqlite);
   }
 
   void Database::EnableSharedCache(bool enable) {
@@ -42,16 +40,16 @@ namespace SQLite3 {
     }
   }
 
-  Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
-    : sqlite(sqlite),
-    dispatcher(dispatcher) {
-    sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
+  Database::Database(sqlite3* sqlite)
+    : sqlite(sqlite)
+    , dispatcher(CoreWindow::GetForCurrentThread()->Dispatcher) {
+      sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
   }
 
   Database::~Database() {
     sqlite3_close(sqlite);
   }
-  
+
   void Database::RunVector(Platform::String^ sql, ParameterVector^ params) {
     return Run(sql, CopyParameters(params));
   }
@@ -92,7 +90,7 @@ namespace SQLite3 {
   void Database::RunMap(Platform::String^ sql, ParameterMap^ params) {
     return Run(sql, params);
   }
-  
+
   template <typename ParameterContainer>
   void Database::Run(Platform::String^ sql, ParameterContainer params) {
     try {
@@ -168,7 +166,7 @@ namespace SQLite3 {
   long long Database::GetLastInsertRowId() {
     return sqlite3_last_insert_rowid(sqlite);
   }
-  
+
   Platform::String^ Database::GetLastError() {
     return ref new Platform::String(lastErrorMsg.c_str());
   }
