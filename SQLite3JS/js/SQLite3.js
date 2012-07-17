@@ -3,15 +3,6 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
-  // Alternative typeof implementation yielding more meaningful results,
-  // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
-  function type(obj) {
-    var typeString;
-
-    typeString = Object.prototype.toString.call(obj);
-    return typeString.substring(8, typeString.length - 1).toLowerCase();
-  }
-
   function toPropertySet(object) {
     var key, propertySet = new Windows.Foundation.Collections.PropertySet();
 
