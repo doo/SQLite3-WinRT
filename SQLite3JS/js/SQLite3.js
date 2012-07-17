@@ -3,6 +3,61 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
+  function PromiseQueue() {
+    this._items = [];
+  }
+
+  PromiseQueue.prototype.append = function (createPromise) {
+    var wrappingPromise,
+        queueItem = { createPromise: createPromise },
+        _this = this;
+
+    wrappingPromise = new WinJS.Promise(function (complete, error) {
+      queueItem.complete = complete;
+      queueItem.error = error;
+    }, function () {
+      if (queueItem.promise) {
+        queueItem.promise.cancel();
+      } else {
+        queueItem.cancelled = true;
+      }
+
+      _this._handleNext();
+    });
+
+    this._items.push(queueItem);
+    this._handleNext();
+
+    return wrappingPromise;
+  };
+
+  PromiseQueue.prototype._handleNext = function () {
+    var nextItem;
+
+    if (this._items.length > 0) {
+      nextItem = this._items[0];
+      this._items = this._items.slice(1);
+      this._handleItem(nextItem);
+    }
+  };
+
+  PromiseQueue.prototype._handleItem = function (queueItem) {
+    var _this = this;
+
+    if (!queueItem.cancelled) {
+      queueItem.promise = queueItem.createPromise();
+      queueItem.promise.done(function (result) {
+        queueItem.complete(result);
+        _this._handleNext();
+      }, function (error) {
+        queueItem.error(error);
+        _this._handleNext();
+      });
+    } else {
+      this._handleNext();
+    }
+  };
+
   function toPropertySet(object) {
     var key, propertySet = new Windows.Foundation.Collections.PropertySet();
 
@@ -30,34 +85,38 @@
   }
 
   function wrapDatabase(connection) {
-    function callNative(funcName, sql, args, callback) {
-      var result, preparedArgs = prepareArgs(args);
+    var that, queue = new PromiseQueue();
 
-      try {
-        if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
-          result = connection[funcName + "Map"](sql, preparedArgs, callback);
-        } else {
-          result = connection[funcName + "Vector"](sql, preparedArgs, callback);
+    function callNativeAsync(funcName, sql, args, callback) {
+      return queue.append(function () {
+        var result, preparedArgs = prepareArgs(args);
+
+        try {
+          if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
+            result = connection[funcName + "Map"](sql, preparedArgs, callback);
+          } else {
+            result = connection[funcName + "Vector"](sql, preparedArgs, callback);
+          }
+          return WinJS.Promise.wrap(result);
+        } catch (e) {
+          return WinJS.Promise.wrapError(e);
         }
-        return WinJS.Promise.wrap(result);
-      } catch (e) {
-        return WinJS.Promise.wrapError(e);
-      }
+      });
     }
 
-    var that = {
+    that = {
       runAsync: function (sql, args) {
-        return callNative('run', sql, args).then(function () {
+        return callNativeAsync('run', sql, args).then(function () {
           return that;
         }, wrapComException);
       },
       oneAsync: function (sql, args) {
-        return callNative('one', sql, args).then(function (row) {
+        return callNativeAsync('one', sql, args).then(function (row) {
           return row ? JSON.parse(row) : null;
         }, wrapComException);
       },
       allAsync: function (sql, args) {
-        return callNative('all', sql, args).then(function (rows) {
+        return callNativeAsync('all', sql, args).then(function (rows) {
           return rows ? JSON.parse(rows) : null;
         }, wrapComException);
       },
@@ -67,7 +126,7 @@
           args = undefined;
         }
 
-        return callNative('each', sql, args, function (row) {
+        return callNativeAsync('each', sql, args, function (row) {
           callback(JSON.parse(row));
         }).then(function () {
           return that;
