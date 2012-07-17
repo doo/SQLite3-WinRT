@@ -5,6 +5,7 @@
 
   function PromiseQueue() {
     this._items = [];
+    this._busy = false;
   }
 
   PromiseQueue.prototype.append = function (createPromise) {
@@ -26,7 +27,9 @@
     });
 
     this._items.push(queueItem);
-    this._handleNext();
+    if (!this._busy) {
+      this._handleNext();
+    }
 
     return wrappingPromise;
   };
@@ -35,9 +38,12 @@
     var nextItem;
 
     if (this._items.length > 0) {
+      this._busy = true;
       nextItem = this._items[0];
       this._items = this._items.slice(1);
       this._handleItem(nextItem);
+    } else {
+      this._busy = false;
     }
   };
 
