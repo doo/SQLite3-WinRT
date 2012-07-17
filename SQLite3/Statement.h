@@ -17,7 +17,7 @@ namespace SQLite3 {
     void Run();
     Platform::String^ One();
     Platform::String^ All();
-    void Each(EachCallback^ callback);
+    void Each(EachCallback^ callback, Windows::UI::Core::CoreDispatcher^ dispatcher);
 
     bool ReadOnly() const;
 
