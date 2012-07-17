@@ -96,11 +96,11 @@ namespace SQLite3 {
 
   template <typename ParameterContainer>
   IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() {
+    return Concurrency::create_async([this, sql, params]() -> void {
       try {
         StatementPtr statement = PrepareAndBind(sql, params);
         statement->Run();
-      } catch (...) {
+      } catch (Platform::Exception^ e) {
         lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
         throw;
       }
@@ -117,11 +117,11 @@ namespace SQLite3 {
 
   template <typename ParameterContainer>
   IAsyncOperation<Platform::String^>^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() {
+    return Concurrency::create_async([this, sql, params]() -> Platform::String^ {
       try {
         StatementPtr statement = PrepareAndBind(sql, params);
         return statement->One();
-      } catch (...) {
+      } catch (Platform::Exception^ e) {
         lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
         throw;
       }
@@ -138,11 +138,11 @@ namespace SQLite3 {
 
   template <typename ParameterContainer>
   IAsyncOperation<Platform::String^>^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() {
+    return Concurrency::create_async([this, sql, params]() -> Platform::String^ {
       try {
         StatementPtr statement = PrepareAndBind(sql, params);
         return statement->All();
-      } catch (...) {
+      } catch (Platform::Exception^ e) {
         lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
         throw;
       }
@@ -159,11 +159,11 @@ namespace SQLite3 {
 
   template <typename ParameterContainer>
   IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
-    return Concurrency::create_async([this, sql, params, callback]() {
+    return Concurrency::create_async([this, sql, params, callback]() -> void {
       try {
         StatementPtr statement = PrepareAndBind(sql, params);
         statement->Each(callback, dispatcher);
-      } catch (...) {
+      } catch (Platform::Exception^ e) {
         lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
         throw;
       }
