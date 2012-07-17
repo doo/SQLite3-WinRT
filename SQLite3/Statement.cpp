@@ -2,6 +2,7 @@
 #include <collection.h>
 #include <ppltasks.h>
 #include <sstream>
+#include <iomanip>
 #include "Statement.h"
 #include "Database.h"
 
@@ -184,40 +185,38 @@ namespace SQLite3 {
     return sqlite3_stmt_readonly(statement) != 0;
   }
 
-  void writeEscaped(std::wstring const& s, std::wostringstream& out) {
-    out << '"';
+  void writeEscaped(const std::wstring& s, std::wostringstream& out) {
+    out << L'"';
     for (std::wstring::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
       wchar_t c = *i;
-      if (' ' <= c && c <= '~' && c != '\\' && c != '"') {
+      if (L' ' <= c && c <= L'~' && c != L'\\' && c != L'"') {
         out << *i;
       }
       else {
-        out << '\\';
+        out << L'\\';
         switch(c) {
-        case '"':  out << '"';  break;
-        case '\\': out << '\\'; break;
-        case '\t': out << 't';  break;
-        case '\r': out << 'r';  break;
-        case '\n': out << 'n';  break;
+        case L'"':  out << L'"';  break;
+        case L'\\': out << L'\\'; break;
+        case L'\t': out << L't';  break;
+        case L'\r': out << L'r';  break;
+        case L'\n': out << L'n';  break;
         default:
-          char const* const hexdig = "0123456789ABCDEF";
-          out << 'x';
-          out << hexdig[c >> 4];
-          out << hexdig[c & 0xF];
+          out << L'u';
+          out << std::setw(4) << std::setfill(L'0') << std::hex << (WORD)c;
         }
       }
     }
-    out << '"';
+    out << L'"';
   }
 
   void Statement::GetRow(std::wostringstream& outstream) {
-    outstream << L"{";
+    outstream << L'{';
     int columnCount = ColumnCount();
     for (int i = 0; i < columnCount; ++i) {
       auto colName = static_cast<const wchar_t*>(sqlite3_column_name16(statement, i));
       auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));
       auto colType = ColumnType(i);
-      outstream << L"\"" << colName  << L"\":";
+      outstream << L'"' << colName  << L"\":";
       switch (colType) {
       case SQLITE_TEXT:
         writeEscaped(colValue, outstream);
@@ -230,11 +229,11 @@ namespace SQLite3 {
         outstream << L"null";
         break;
       }
-      outstream << L",";
+      outstream << L',';
     }
     std::streamoff pos = outstream.tellp();
     outstream.seekp(pos - 1l);
-    outstream << L"}";
+    outstream << L'}';
   }
 
   Platform::Object^ Statement::GetColumn(int index) {
