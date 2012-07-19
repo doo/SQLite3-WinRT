@@ -81,13 +81,20 @@
     return (args instanceof Array) ? args : toPropertySet(args);
   }
 
-  function wrapComException(comException) {
-    var resultCode = comException.number & 0xffff;
+  function wrapException(exception) {
+    var error, resultCode;
 
-    return WinJS.Promise.wrapError({
-      message: 'SQLite Error (Result Code ' + resultCode + ')',
-      resultCode: resultCode
-    });
+    if (exception.hasOwnProperty('number')) {
+      resultCode = exception.number & 0xffff;
+      error = {
+        message: 'SQLite Error (Result Code ' + resultCode + ')',
+        resultCode: resultCode
+      };
+    } else {
+      error = exception;
+    }
+
+    return WinJS.Promise.wrapError(error);
   }
 
   function wrapDatabase(connection) {
@@ -107,17 +114,17 @@
       runAsync: function (sql, args) {
         return callNativeAsync('runAsync', sql, args).then(function () {
           return that;
-        }, wrapComException);
+        }, wrapException);
       },
       oneAsync: function (sql, args) {
         return callNativeAsync('oneAsync', sql, args).then(function (row) {
           return row ? JSON.parse(row) : null;
-        }, wrapComException);
+        }, wrapException);
       },
       allAsync: function (sql, args) {
         return callNativeAsync('allAsync', sql, args).then(function (rows) {
           return rows ? JSON.parse(rows) : null;
-        }, wrapComException);
+        }, wrapException);
       },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -129,7 +136,7 @@
           callback(JSON.parse(row));
         }).then(function () {
           return that;
-        }, wrapComException);
+        }, wrapException);
       },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -317,7 +324,7 @@
   function openAsync(dbPath) {
     return SQLite3.Database.openAsync(dbPath).then(function (connection) {
       return wrapDatabase(connection);
-    }, wrapComException);
+    }, wrapException);
   }
 
   WinJS.Namespace.define('SQLite3JS', {
