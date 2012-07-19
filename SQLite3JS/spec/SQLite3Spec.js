@@ -176,6 +176,20 @@
         })
       );
     });
+
+    it('should allow cancellation', function () {
+      var promise, thisSpec = this;
+
+      promise = db.allAsync('SELECT * FROM Item ORDER BY id').then(function () {
+        thisSpec.fail('Promise did not fail as expected.')
+      }, function (error) {
+        expect(error.message).toEqual('Canceled');
+      });
+
+      promise.cancel();
+
+      waitsForPromise(promise);
+    });
   });
 
   describe('eachAsync()', function () {
@@ -212,6 +226,22 @@
             expect(ids).toEqual([1, 2]);
           })
       );
+    });
+
+    it('should allow cancellation in the callback', function () {
+      var promise, thisSpec = this;
+
+      function cancel(row) {
+        promise.cancel();
+      }
+
+      promise = db.eachAsync('SELECT * FROM Item ORDER BY id', cancel).then(function () {
+        thisSpec.fail('Promise did not fail as expected.')
+      }, function (error) {
+        expect(error.message).toEqual('Canceled');
+      });
+
+      waitsForPromise(promise);
     });
   });
 
