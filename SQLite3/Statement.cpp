@@ -156,32 +156,10 @@ namespace SQLite3 {
     }
   }
 
-  void notifyUnlock(void* args[], int nArgs) {
-    assert(nArgs == 1);
-    for (int i = 0; i < nArgs; i++) {
-      ((Statement*)args[i])->NotifyUnlock();
-    }
-  }
-
-  void Statement::NotifyUnlock() {
-    ReleaseMutex(dbLockMutex);
-  }
 
   int Statement::Step() {
     int ret = sqlite3_step(statement);
-    if (ret == SQLITE_LOCKED) {
-      // HACK, HACK, HACK! Extract the sqlite connection from the statement
-      sqlite3* db = (sqlite3*)((void**)statement)[0];
-      dbLockMutex = CreateMutexExW(NULL, NULL, CREATE_MUTEX_INITIAL_OWNER, NULL);
-      ret = sqlite3_unlock_notify(db, &notifyUnlock, this);
-      if (ret == SQLITE_LOCKED) {
-        ReleaseMutex(dbLockMutex);
-        return SQLITE_LOCKED;
-      }
-      WaitForSingleObjectEx(dbLockMutex, INFINITE, false);
-      sqlite3_reset(statement);
-      return Step();
-    }
+  
     if (ret != SQLITE_ROW && ret != SQLITE_DONE) {
       throwSQLiteError(ret);
     }

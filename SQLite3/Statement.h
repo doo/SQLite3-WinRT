@@ -43,11 +43,8 @@ namespace SQLite3 {
     int64 ColumnInt(int index);
     double ColumnDouble(int index);
 
-    void NotifyUnlock();
   private:
     HANDLE dbLockMutex;
     sqlite3_stmt* statement;
   };
 }
-
-void notifyUnlock(void* args[], int nArgs);
