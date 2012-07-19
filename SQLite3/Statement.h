@@ -5,6 +5,8 @@
 
 namespace SQLite3 {
   class Statement {
+    friend void notifyUnlock(void* args[], int nArgs);
+
   public:
     static StatementPtr Prepare(sqlite3* sqlite, Platform::String^ sql);
     ~Statement();
@@ -13,9 +15,11 @@ namespace SQLite3 {
     void Bind(ParameterMap^ params);
 
     void Run();
-    Row^ One();
-    Rows^ All();
+    Platform::String^ One();
+    Platform::String^ All();
     void Each(EachCallback^ callback, Windows::UI::Core::CoreDispatcher^ dispatcher);
+
+    bool ReadOnly() const;
 
   private:
     Statement(sqlite3_stmt* statement);
@@ -24,12 +28,12 @@ namespace SQLite3 {
     int BindParameterCount();
     std::wstring BindParameterName(int index);
     int BindText(int index, Platform::String^ val);
-    int BindInt(int index, int val);
+    int BindInt(int index, int64 val);
     int BindDouble(int index, double val);
     int BindNull(int index);
 
     int Step();
-    Row^ GetRow();
+    void GetRow(std::wostringstream& row);
     Platform::Object^ GetColumn(int index);
 
     int ColumnCount();
@@ -39,7 +43,11 @@ namespace SQLite3 {
     int64 ColumnInt(int index);
     double ColumnDouble(int index);
 
+    void NotifyUnlock();
   private:
+    HANDLE dbLockMutex;
     sqlite3_stmt* statement;
   };
 }
+
+void notifyUnlock(void* args[], int nArgs);
