@@ -14,25 +14,29 @@ namespace SQLite3 {
   public ref class Database sealed {
   public:
     static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
+    static void EnableSharedCache(bool enable);
+
     ~Database();
 
     IAsyncAction^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
     IAsyncAction^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
-    IAsyncOperation<Row^>^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    IAsyncOperation<Row^>^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
-    IAsyncOperation<Rows^>^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    IAsyncOperation<Rows^>^ AllAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    IAsyncOperation<Platform::String^>^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    IAsyncOperation<Platform::String^>^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    IAsyncOperation<Platform::String^>^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    IAsyncOperation<Platform::String^>^ AllAsyncMap(Platform::String^ sql, ParameterMap^ params);
     IAsyncAction^ EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
     IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
+    bool GetAutocommit();
     long long GetLastInsertRowId();
+    Platform::String^ GetLastError();
 
     event ChangeHandler^ Insert;
     event ChangeHandler^ Update;
     event ChangeHandler^ Delete;
 
   private:
-    Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^);
+    Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^ dispatcher);
 
     template <typename ParameterContainer>
     StatementPtr PrepareAndBind(Platform::String^ sql, ParameterContainer params);
@@ -40,9 +44,9 @@ namespace SQLite3 {
     template <typename ParameterContainer>
     IAsyncAction^ RunAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    IAsyncOperation<Row^>^ OneAsync(Platform::String^ sql, ParameterContainer params);
+    IAsyncOperation<Platform::String^>^ OneAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    IAsyncOperation<Rows^>^ AllAsync(Platform::String^ sql, ParameterContainer params);
+    IAsyncOperation<Platform::String^>^ AllAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
     IAsyncAction^ EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 
@@ -51,5 +55,6 @@ namespace SQLite3 {
 
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
+    std::wstring lastErrorMsg;
   };
 }

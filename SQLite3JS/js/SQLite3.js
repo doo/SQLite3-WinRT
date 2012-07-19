@@ -3,29 +3,66 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
-  // Alternative typeof implementation yielding more meaningful results,
-  // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
-  function type(obj) {
-    var typeString;
-
-    typeString = Object.prototype.toString.call(obj);
-    return typeString.substring(8, typeString.length - 1).toLowerCase();
+  function PromiseQueue() {
+    this._items = [];
+    this._busy = false;
   }
 
-  function toObjectImpl(propertySet) {
-    var key, object = {}, iterator = propertySet.first();
+  PromiseQueue.prototype.append = function (createPromise) {
+    var wrappingPromise,
+        queueItem = { createPromise: createPromise },
+        _this = this;
 
-    while (iterator.hasCurrent) {
-      object[iterator.current.key] = iterator.current.value;
-      iterator.moveNext();
+    wrappingPromise = new WinJS.Promise(function (complete, error) {
+      queueItem.complete = complete;
+      queueItem.error = error;
+    }, function () {
+      if (queueItem.promise) {
+        queueItem.promise.cancel();
+      } else {
+        queueItem.cancelled = true;
+      }
+
+      _this._handleNext();
+    });
+
+    this._items.push(queueItem);
+    if (!this._busy) {
+      this._handleNext();
     }
 
-    return object;
-  }
+    return wrappingPromise;
+  };
 
-  function toObject(propertySet) {
-    return propertySet ? toObjectImpl(propertySet) : null;
-  }
+  PromiseQueue.prototype._handleNext = function () {
+    var nextItem;
+
+    if (this._items.length > 0) {
+      this._busy = true;
+      nextItem = this._items[0];
+      this._items = this._items.slice(1);
+      this._handleItem(nextItem);
+    } else {
+      this._busy = false;
+    }
+  };
+
+  PromiseQueue.prototype._handleItem = function (queueItem) {
+    var _this = this;
+
+    if (!queueItem.cancelled) {
+      queueItem.promise = queueItem.createPromise();
+      queueItem.promise.done(function (result) {
+        queueItem.complete(result);
+        _this._handleNext();
+      }, function (error) {
+        queueItem.error(error);
+        _this._handleNext();
+      });
+    } else {
+      this._handleNext();
+    }
+  };
 
   function toPropertySet(object) {
     var key, propertySet = new Windows.Foundation.Collections.PropertySet();
@@ -54,30 +91,32 @@
   }
 
   function wrapDatabase(connection) {
-    function callNative(funcName, sql, args, callback) {
-      var preparedArgs = prepareArgs(args);
+    var that, queue = new PromiseQueue();
 
-      if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
-        return connection[funcName + "Map"](sql, preparedArgs, callback);
-      }
-
-      return connection[funcName + "Vector"](sql, preparedArgs, callback);
+    function callNativeAsync(funcName, sql, args, callback) {
+      return queue.append(function () {
+        var preparedArgs = prepareArgs(args);
+        if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
+          return connection[funcName + "Map"](sql, preparedArgs, callback);
+        }
+        return connection[funcName + "Vector"](sql, preparedArgs, callback);
+      });
     }
 
-    var that = {
+    that = {
       runAsync: function (sql, args) {
-        return callNative('runAsync', sql, args).then(function () {
+        return callNativeAsync('runAsync', sql, args).then(function () {
           return that;
         }, wrapComException);
       },
       oneAsync: function (sql, args) {
-        return callNative('oneAsync', sql, args).then(function (row) {
-          return toObject(row);
+        return callNativeAsync('oneAsync', sql, args).then(function (row) {
+          return row ? JSON.parse(row) : null;
         }, wrapComException);
       },
       allAsync: function (sql, args) {
-        return callNative('allAsync', sql, args).then(function (rows) {
-          return rows.map(toObject);
+        return callNativeAsync('allAsync', sql, args).then(function (rows) {
+          return rows ? JSON.parse(rows) : null;
         }, wrapComException);
       },
       eachAsync: function (sql, args, callback) {
@@ -86,8 +125,8 @@
           args = undefined;
         }
 
-        return callNative('eachAsync', sql, args, function (row) {
-          callback(toObject(row));
+        return callNativeAsync('eachAsync', sql, args, function (row) {
+          callback(JSON.parse(row));
         }).then(function () {
           return that;
         }, wrapComException);
@@ -108,6 +147,12 @@
       },
       getLastInsertRowId: function () {
         return connection.getLastInsertRowId();
+      },
+      getAutocommit: function () {
+        return connection.getAutocommit();
+      },
+      getLastError: function () {
+        return connection.getLastError();
       },
       itemDataSource: function (sql, args, keyColumnName, groupKeyColumnName) {
         if (typeof args === 'string') {
@@ -165,6 +210,9 @@
                   data: row
                 };
                 if (groupKeyColumnName) {
+                  if (!row.hasOwnProperty(groupKeyColumnName) || row[groupKeyColumnName] === null) {
+                    throw "Group key property not found: " + groupKeyColumnName;
+                  }
                   item.groupKey = row[groupKeyColumnName].toString();
                 }
                 return item;
@@ -177,6 +225,12 @@
               });
           });
         },
+        setNotificationHandler: function (notificationHandler) {
+          this._notificationHandler = notificationHandler;
+        },
+        getNotificationHandler: function () {
+          return this._notificationHandler;
+        },
         setQuery: function (sql) {
           this._sql = sql;
         }
@@ -187,6 +241,9 @@
       setQuery: function (sql) {
         this._dataAdapter.setQuery(sql);
         this.invalidateAll();
+      },
+      getNotificationHandler: function () {
+        return this._dataAdapter.getNotificationHandler();
       }
     }
   );
@@ -216,7 +273,7 @@
 
             return item;
           }).then(function (groups) {
-            dataAdapter._groups = groups;
+            dataAdapter._groups = groups.filter(function (group) { return group.groupSize > 0; });
           });
         },
         getCount: function () {
@@ -230,6 +287,7 @@
               items: dataAdapter._groups.slice(),
               offset: requestIndex,
               absoluteIndex: requestIndex,
+              totalCount: dataAdapter._groups.length,
               atStart: true,
               atEnd: true
             };
@@ -239,10 +297,20 @@
           return dataAdapter._ensureGroupsAsync().then(function () {
             return dataAdapter.itemsFromIndex(dataAdapter._keyIndexMap[key], countBefore, countAfter);
           });
+        },
+        setNotificationHandler: function (notificationHandler) {
+          this._notificationHandler = notificationHandler;
+        },
+        getNotificationHandler: function () {
+          return this._notificationHandler;
         }
       };
-
+      this._dataAdapter = dataAdapter;
       this._baseDataSourceConstructor(dataAdapter);
+    }, {
+      getNotificationHandler: function () {
+        return this._dataAdapter.getNotificationHandler();
+      }
     }
   );
 
