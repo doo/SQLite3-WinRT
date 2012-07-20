@@ -190,9 +190,12 @@
   ItemDataSource = WinJS.Class.derive(WinJS.UI.VirtualizedDataSource,
     function (db, sql, args, keyColumnName, groupKeyColumnName) {
       this._dataAdapter = {
-        _sql: sql,
+        setQuery: function (sql, args) {
+          this._sql = sql;
+          this._args = args;
+        },
         getCount: function () {
-          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + this._sql + ')', args)
+          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + this._sql + ')', this._args)
             .then(function (row) { return row.cnt; });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
@@ -204,6 +207,7 @@
           return this.getCount().then(function (totalCount) {
             return db.mapAsync(
               'SELECT * FROM (' + that._sql + ') LIMIT ' + limit + ' OFFSET ' + offset,
+              that._args,
               function (row) {
                 var item = {
                   key: row[keyColumnName].toString(),
@@ -230,16 +234,14 @@
         },
         getNotificationHandler: function () {
           return this._notificationHandler;
-        },
-        setQuery: function (sql) {
-          this._sql = sql;
         }
       };
 
+      this._dataAdapter.setQuery(sql, args);
       this._baseDataSourceConstructor(this._dataAdapter);
     }, {
-      setQuery: function (sql) {
-        this._dataAdapter.setQuery(sql);
+      setQuery: function (sql, args) {
+        this._dataAdapter.setQuery(sql, args);
         this.invalidateAll();
       },
       getNotificationHandler: function () {
