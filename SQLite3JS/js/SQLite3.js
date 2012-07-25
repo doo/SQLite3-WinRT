@@ -81,13 +81,17 @@
     return (args instanceof Array) ? args : toPropertySet(args);
   }
 
-  function wrapException(exception) {
-    var error, resultCode;
+  function wrapException(exception, detailedMessage) {
+    var error, message, resultCode;
 
     if (exception.hasOwnProperty('number')) {
       resultCode = exception.number & 0xffff;
+      message = 'SQLite Error ' + resultCode;
+      if (detailedMessage) {
+        message += ': ' + detailedMessage;
+      }
       error = {
-        message: 'SQLite Error (Result Code ' + resultCode + ')',
+        message: message,
         resultCode: resultCode
       };
     } else {
@@ -110,21 +114,25 @@
       });
     }
 
+    function wrapExceptionWithLastError(exception) {
+      return wrapException(exception, that.getLastError());
+    }
+
     that = {
       runAsync: function (sql, args) {
         return callNativeAsync('runAsync', sql, args).then(function () {
           return that;
-        }, wrapException);
+        }, wrapExceptionWithLastError);
       },
       oneAsync: function (sql, args) {
         return callNativeAsync('oneAsync', sql, args).then(function (row) {
           return row ? JSON.parse(row) : null;
-        }, wrapException);
+        }, wrapExceptionWithLastError);
       },
       allAsync: function (sql, args) {
         return callNativeAsync('allAsync', sql, args).then(function (rows) {
           return rows ? JSON.parse(rows) : null;
-        }, wrapException);
+        }, wrapExceptionWithLastError);
       },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -136,7 +144,7 @@
           callback(JSON.parse(row));
         }).then(function () {
           return that;
-        }, wrapException);
+        }, wrapExceptionWithLastError);
       },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
