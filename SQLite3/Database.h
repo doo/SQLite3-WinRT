@@ -12,6 +12,8 @@ namespace SQLite3 {
   public delegate void ChangeHandler(Platform::Object^ source, ChangeEvent event);
   
   public ref class Database sealed {
+    friend void sqlite_row_counter(sqlite3_context*,int,sqlite3_value**);
+
   public:
     static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
     static void EnableSharedCache(bool enable);
@@ -53,6 +55,7 @@ namespace SQLite3 {
     static void __cdecl UpdateHook(void* data, int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
     void OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
 
+    sqlite_int64 statementRowCounter;
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
     std::wstring lastErrorMsg;
