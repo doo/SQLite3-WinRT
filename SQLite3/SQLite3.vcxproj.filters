@@ -11,6 +11,7 @@
     <ClCompile Include="Database.cpp" />
     <ClCompile Include="sqlite3.c" />
     <ClCompile Include="Statement.cpp" />
+    <ClCompile Include="Common.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Constants.h" />

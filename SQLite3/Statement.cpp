@@ -1,29 +1,19 @@
+#include <assert.h>
 #include <collection.h>
 #include <ppltasks.h>
-#include <Winerror.h>
-
+#include <sstream>
+#include <iomanip>
 #include "Statement.h"
 #include "Database.h"
 
 namespace SQLite3 {
-  static std::wstring toUtf16(const char* utf8String) {
-    DWORD numCharacters = MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, nullptr, 0);
-    auto wideText = new std::wstring::value_type[numCharacters];
-    MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, wideText, numCharacters);
-    std::wstring result(wideText);
-    delete[] wideText;
-    return result;
-  }
-
   StatementPtr Statement::Prepare(sqlite3* sqlite, Platform::String^ sql) {
     sqlite3_stmt* statement;
     int ret = sqlite3_prepare16(sqlite, sql->Data(), -1, &statement, 0);
 
     if (ret != SQLITE_OK) {
       sqlite3_finalize(statement);
-
-      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
-      throw ref new Platform::COMException(hresult);
+      throwSQLiteError(ret);
     }
 
     return StatementPtr(new Statement(statement));
@@ -99,15 +89,15 @@ namespace SQLite3 {
   }
 
   std::wstring Statement::BindParameterName(int index) {
-    return toUtf16(sqlite3_bind_parameter_name(statement, index));
+    return ToWString(sqlite3_bind_parameter_name(statement, index));
   }
 
   int Statement::BindText(int index, Platform::String^ val) {
     return sqlite3_bind_text16(statement, index, val->Data(), -1, SQLITE_TRANSIENT);
   }
 
-  int Statement::BindInt(int index, int val) {
-    return sqlite3_bind_int(statement, index, val);
+  int Statement::BindInt(int index, int64 val) {
+    return sqlite3_bind_int64(statement, index, val);
   }
 
   int Statement::BindDouble(int index, double val) {
@@ -122,53 +112,114 @@ namespace SQLite3 {
     Step();
   }
 
-  Row^ Statement::One() {
-    return (Step() == SQLITE_ROW) ? GetRow() : nullptr;
+  Platform::String^ Statement::One() {
+    std::wostringstream result;
+    if (Step() == SQLITE_ROW) {
+      GetRow(result);
+      return ref new Platform::String(result.str().c_str());
+    } else {
+      return nullptr;
+    }
   }
 
-  Rows^ Statement::All() {
-    auto rows = ref new Platform::Collections::Vector<Row^>();
-
-    while (Step() == SQLITE_ROW) {
-      rows->Append(GetRow());
+  Platform::String^ Statement::All() {
+    std::wostringstream result;
+    result << L"[";
+    auto stepResult = Step();
+    bool hasData = (stepResult == SQLITE_ROW);
+    while (stepResult == SQLITE_ROW) {
+      GetRow(result);
+      result << L",";
+      stepResult = Step();
     }
-
-    return rows->GetView();
+    if (hasData) {
+      std::streamoff pos = result.tellp();
+      result.seekp(pos-1);
+    }
+    result << L"]";
+    return ref new Platform::String(result.str().c_str());
   }
 
   void Statement::Each(EachCallback^ callback, Windows::UI::Core::CoreDispatcher^ dispatcher) {
-    auto callbackDelegate = ref new Windows::UI::Core::DispatchedHandler([=]() {
-      callback(GetRow());
-    });
-
     while (Step() == SQLITE_ROW) {
-      auto callbackTask = concurrency::create_task(
-        dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, callbackDelegate));
+      std::wostringstream output;
+      GetRow(output);
+      auto row = ref new Platform::String(output.str().c_str());
+      auto callbackTask = concurrency::task<void>(
+        dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, 
+          ref new Windows::UI::Core::DispatchedHandler([row, callback]() {
+            callback(row);
+          })
+        )
+      );
       callbackTask.get();
     }
   }
 
+
   int Statement::Step() {
     int ret = sqlite3_step(statement);
-
+  
     if (ret != SQLITE_ROW && ret != SQLITE_DONE) {
-      HRESULT hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, ret);
-      throw ref new Platform::COMException(hresult);
+      throwSQLiteError(ret);
     }
 
     return ret;
   }
 
-  Row^ Statement::GetRow() {
-    auto row = ref new Platform::Collections::Map<Platform::String^, Platform::Object^>();
+  bool Statement::ReadOnly() const {
+    return sqlite3_stmt_readonly(statement) != 0;
+  }
 
-    int columnCount = ColumnCount();
-    for (int i = 0 ; i < columnCount; ++i) {
-      auto name = ColumnName(i);
-      row->Insert(name, GetColumn(i));
+  void writeEscaped(const std::wstring& s, std::wostringstream& out) {
+    out << L'"';
+    for (std::wstring::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
+      wchar_t c = *i;
+      if (L' ' <= c && c <= L'~' && c != L'\\' && c != L'"') {
+        out << *i;
+      }
+      else {
+        out << L'\\';
+        switch(c) {
+        case L'"':  out << L'"';  break;
+        case L'\\': out << L'\\'; break;
+        case L'\t': out << L't';  break;
+        case L'\r': out << L'r';  break;
+        case L'\n': out << L'n';  break;
+        default:
+          out << L'u';
+          out << std::setw(4) << std::setfill(L'0') << std::hex << (WORD)c;
+        }
+      }
     }
+    out << L'"';
+  }
 
-    return row->GetView();
+  void Statement::GetRow(std::wostringstream& outstream) {
+    outstream << L'{';
+    int columnCount = ColumnCount();
+    for (int i = 0; i < columnCount; ++i) {
+      auto colName = static_cast<const wchar_t*>(sqlite3_column_name16(statement, i));
+      auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));
+      auto colType = ColumnType(i);
+      outstream << L'"' << colName  << L"\":";
+      switch (colType) {
+      case SQLITE_TEXT:
+        writeEscaped(colValue, outstream);
+        break;
+      case SQLITE_INTEGER:
+      case SQLITE_FLOAT:
+        outstream << colValue;
+        break;
+      case SQLITE_NULL:
+        outstream << L"null";
+        break;
+      }
+      outstream << L',';
+    }
+    std::streamoff pos = outstream.tellp();
+    outstream.seekp(pos - 1l);
+    outstream << L'}';
   }
 
   Platform::Object^ Statement::GetColumn(int index) {

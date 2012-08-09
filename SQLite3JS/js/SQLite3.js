@@ -3,29 +3,66 @@
 
   var Database, ItemDataSource, GroupDataSource;
 
-  // Alternative typeof implementation yielding more meaningful results,
-  // see http://javascriptweblog.wordpress.com/2011/08/08/fixing-the-javascript-typeof-operator/
-  function type(obj) {
-    var typeString;
-
-    typeString = Object.prototype.toString.call(obj);
-    return typeString.substring(8, typeString.length - 1).toLowerCase();
+  function PromiseQueue() {
+    this._items = [];
+    this._busy = false;
   }
 
-  function toObjectImpl(propertySet) {
-    var key, object = {}, iterator = propertySet.first();
+  PromiseQueue.prototype.append = function (createPromise) {
+    var wrappingPromise,
+        queueItem = { createPromise: createPromise },
+        _this = this;
 
-    while (iterator.hasCurrent) {
-      object[iterator.current.key] = iterator.current.value;
-      iterator.moveNext();
+    wrappingPromise = new WinJS.Promise(function (complete, error) {
+      queueItem.complete = complete;
+      queueItem.error = error;
+    }, function () {
+      if (queueItem.promise) {
+        queueItem.promise.cancel();
+      } else {
+        queueItem.cancelled = true;
+      }
+
+      _this._handleNext();
+    });
+
+    this._items.push(queueItem);
+    if (!this._busy) {
+      this._handleNext();
     }
 
-    return object;
-  }
+    return wrappingPromise;
+  };
 
-  function toObject(propertySet) {
-    return propertySet ? toObjectImpl(propertySet) : null;
-  }
+  PromiseQueue.prototype._handleNext = function () {
+    var nextItem;
+
+    if (this._items.length > 0) {
+      this._busy = true;
+      nextItem = this._items[0];
+      this._items = this._items.slice(1);
+      this._handleItem(nextItem);
+    } else {
+      this._busy = false;
+    }
+  };
+
+  PromiseQueue.prototype._handleItem = function (queueItem) {
+    var _this = this;
+
+    if (!queueItem.cancelled) {
+      queueItem.promise = queueItem.createPromise();
+      queueItem.promise.done(function (result) {
+        queueItem.complete(result);
+        _this._handleNext();
+      }, function (error) {
+        queueItem.error(error);
+        _this._handleNext();
+      });
+    } else {
+      this._handleNext();
+    }
+  };
 
   function toPropertySet(object) {
     var key, propertySet = new Windows.Foundation.Collections.PropertySet();
@@ -44,41 +81,58 @@
     return (args instanceof Array) ? args : toPropertySet(args);
   }
 
-  function wrapComException(comException) {
-    var resultCode = comException.number & 0xffff;
+  function wrapException(exception, detailedMessage) {
+    var error, message, resultCode;
 
-    return WinJS.Promise.wrapError({
-      message: 'SQLite Error (Result Code ' + resultCode + ')',
-      resultCode: resultCode
-    });
+    if (exception.hasOwnProperty('number')) {
+      resultCode = exception.number & 0xffff;
+      message = 'SQLite Error ' + resultCode;
+      if (detailedMessage) {
+        message += ': ' + detailedMessage;
+      }
+      error = {
+        message: message,
+        resultCode: resultCode
+      };
+    } else {
+      error = exception;
+    }
+
+    return WinJS.Promise.wrapError(error);
   }
 
   function wrapDatabase(connection) {
-    function callNative(funcName, sql, args, callback) {
-      var preparedArgs = prepareArgs(args);
+    var that, queue = new PromiseQueue();
 
-      if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
-        return connection[funcName + "Map"](sql, preparedArgs, callback);
-      }
-
-      return connection[funcName + "Vector"](sql, preparedArgs, callback);
+    function callNativeAsync(funcName, sql, args, callback) {
+      return queue.append(function () {
+        var preparedArgs = prepareArgs(args);
+        if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
+          return connection[funcName + "Map"](sql, preparedArgs, callback);
+        }
+        return connection[funcName + "Vector"](sql, preparedArgs, callback);
+      });
     }
 
-    var that = {
+    function wrapExceptionWithLastError(exception) {
+      return wrapException(exception, that.getLastError());
+    }
+
+    that = {
       runAsync: function (sql, args) {
-        return callNative('runAsync', sql, args).then(function () {
+        return callNativeAsync('runAsync', sql, args).then(function () {
           return that;
-        }, wrapComException);
+        }, wrapExceptionWithLastError);
       },
       oneAsync: function (sql, args) {
-        return callNative('oneAsync', sql, args).then(function (row) {
-          return toObject(row);
-        }, wrapComException);
+        return callNativeAsync('oneAsync', sql, args).then(function (row) {
+          return row ? JSON.parse(row) : null;
+        }, wrapExceptionWithLastError);
       },
       allAsync: function (sql, args) {
-        return callNative('allAsync', sql, args).then(function (rows) {
-          return rows.map(toObject);
-        }, wrapComException);
+        return callNativeAsync('allAsync', sql, args).then(function (rows) {
+          return rows ? JSON.parse(rows) : null;
+        }, wrapExceptionWithLastError);
       },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -86,11 +140,11 @@
           args = undefined;
         }
 
-        return callNative('eachAsync', sql, args, function (row) {
-          callback(toObject(row));
+        return callNativeAsync('eachAsync', sql, args, function (row) {
+          callback(JSON.parse(row));
         }).then(function () {
           return that;
-        }, wrapComException);
+        }, wrapExceptionWithLastError);
       },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -108,6 +162,12 @@
       },
       getLastInsertRowId: function () {
         return connection.getLastInsertRowId();
+      },
+      getAutocommit: function () {
+        return connection.getAutocommit();
+      },
+      getLastError: function () {
+        return connection.getLastError();
       },
       itemDataSource: function (sql, args, keyColumnName, groupKeyColumnName) {
         if (typeof args === 'string') {
@@ -129,8 +189,15 @@
       },
       close: function () {
         connection.close();
-      }
+      },
+      addEventListener: connection.addEventListener.bind(connection),
+      removeEventListener: connection.removeEventListener.bind(connection)
     };
+
+    Object.defineProperties(
+      that,
+      WinJS.Utilities.createEventProperties('update', 'delete', 'insert')
+    );
 
     return that;
   }
@@ -138,9 +205,12 @@
   ItemDataSource = WinJS.Class.derive(WinJS.UI.VirtualizedDataSource,
     function (db, sql, args, keyColumnName, groupKeyColumnName) {
       this._dataAdapter = {
-        _sql: sql,
+        setQuery: function (sql, args) {
+          this._sql = sql;
+          this._args = args;
+        },
         getCount: function () {
-          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + this._sql + ')', args)
+          return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + this._sql + ')', this._args)
             .then(function (row) { return row.cnt; });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
@@ -152,12 +222,16 @@
           return this.getCount().then(function (totalCount) {
             return db.mapAsync(
               'SELECT * FROM (' + that._sql + ') LIMIT ' + limit + ' OFFSET ' + offset,
+              that._args,
               function (row) {
                 var item = {
                   key: row[keyColumnName].toString(),
                   data: row
                 };
                 if (groupKeyColumnName) {
+                  if (!row.hasOwnProperty(groupKeyColumnName) || row[groupKeyColumnName] === null) {
+                    throw "Group key property not found: " + groupKeyColumnName;
+                  }
                   item.groupKey = row[groupKeyColumnName].toString();
                 }
                 return item;
@@ -170,16 +244,23 @@
               });
           });
         },
-        setQuery: function (sql) {
-          this._sql = sql;
+        setNotificationHandler: function (notificationHandler) {
+          this._notificationHandler = notificationHandler;
+        },
+        getNotificationHandler: function () {
+          return this._notificationHandler;
         }
       };
 
+      this._dataAdapter.setQuery(sql, args);
       this._baseDataSourceConstructor(this._dataAdapter);
     }, {
-      setQuery: function (sql) {
-        this._dataAdapter.setQuery(sql);
+      setQuery: function (sql, args) {
+        this._dataAdapter.setQuery(sql, args);
         this.invalidateAll();
+      },
+      getNotificationHandler: function () {
+        return this._dataAdapter.getNotificationHandler();
       }
     }
   );
@@ -208,21 +289,22 @@
             firstItemIndex += item.groupSize;
 
             return item;
-          }).then(function(groups) {
-            dataAdapter._groups = groups;
+          }).then(function (groups) {
+            dataAdapter._groups = groups.filter(function (group) { return group.groupSize > 0; });
           });
         },
         getCount: function () {
-          return dataAdapter._ensureGroupsAsync().then(function() {
+          return dataAdapter._ensureGroupsAsync().then(function () {
             return dataAdapter._groups.length;
           });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
-          return dataAdapter._ensureGroupsAsync().then(function() {
+          return dataAdapter._ensureGroupsAsync().then(function () {
             return {
               items: dataAdapter._groups.slice(),
               offset: requestIndex,
               absoluteIndex: requestIndex,
+              totalCount: dataAdapter._groups.length,
               atStart: true,
               atEnd: true
             };
@@ -232,17 +314,27 @@
           return dataAdapter._ensureGroupsAsync().then(function () {
             return dataAdapter.itemsFromIndex(dataAdapter._keyIndexMap[key], countBefore, countAfter);
           });
+        },
+        setNotificationHandler: function (notificationHandler) {
+          this._notificationHandler = notificationHandler;
+        },
+        getNotificationHandler: function () {
+          return this._notificationHandler;
         }
       };
-
+      this._dataAdapter = dataAdapter;
       this._baseDataSourceConstructor(dataAdapter);
+    }, {
+      getNotificationHandler: function () {
+        return this._dataAdapter.getNotificationHandler();
+      }
     }
   );
 
   function openAsync(dbPath) {
     return SQLite3.Database.openAsync(dbPath).then(function (connection) {
       return wrapDatabase(connection);
-    }, wrapComException);
+    }, wrapException);
   }
 
   WinJS.Namespace.define('SQLite3JS', {

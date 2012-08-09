@@ -60,8 +60,7 @@
         db.runAsync('DELETE FROM Item WHERE id = 1')
           .then(function (chainedDb) {
             return chainedDb.oneAsync('SELECT COUNT(*) AS count FROM Item');
-          })
-          .then(function (row) {
+          }).then(function (row) {
             expect(row.count).toEqual(2);
           })
       );
@@ -74,8 +73,7 @@
         db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', [name, null, null])
           .then(function () {
             return db.oneAsync('SELECT * FROM Item WHERE name = ?', [name]);
-          })
-          .then(function (row) {
+          }).then(function (row) {
             expect(row.name).toEqual(name);
             expect(row.price).toEqual(null);
             expect(row.id).toEqual(null);
@@ -91,8 +89,7 @@
         db.runAsync('INSERT INTO Item (name, dateBought) VALUES (?, ?)', [name, dateBought])
           .then(function () {
             return db.oneAsync('SELECT * FROM Item WHERE dateBought=?', [dateBought]);
-          })
-          .then(function (row) {
+          }).then(function (row) {
             expect(row.name).toEqual(name);
             expect(new Date(row.dateBought)).toEqual(dateBought);
           })
@@ -108,8 +105,7 @@
             return db.oneAsync(
               'SELECT COUNT(*) AS cnt FROM Item WHERE price > :limit',
               { limit: 5 });
-          })
-          .then(function (row) {
+          }).then(function (row) {
             expect(row.cnt).toEqual(1);
           })
       );
@@ -142,6 +138,21 @@
         })
       );
     });
+
+    it('should support special characters in strings', function () {
+      var rowToInsert = {
+        name: "Foo\nBar'n"
+      };
+      waitsForPromise(
+        db.runAsync('INSERT INTO Item(name) VALUES(:name)', rowToInsert)
+          .then(function () {
+            var id = db.getLastInsertRowId();
+            return db.oneAsync('SELECT * FROM Item WHERE rowId=?', [id]);
+          }).then(function (result) {
+            expect(result.name).toEqual("Foo\nBar'n");
+          })
+      );
+    });
   });
 
   describe('allAsync()', function () {
@@ -165,6 +176,20 @@
         })
       );
     });
+
+    it('should allow cancellation', function () {
+      var promise, thisSpec = this;
+
+      promise = db.allAsync('SELECT * FROM Item ORDER BY id').then(function () {
+        thisSpec.fail('Promise did not fail as expected.')
+      }, function (error) {
+        expect(error.message).toEqual('Canceled');
+      });
+
+      promise.cancel();
+
+      waitsForPromise(promise);
+    });
   });
 
   describe('eachAsync()', function () {
@@ -177,10 +202,9 @@
 
     it('should call a callback for each row', function () {
       waitsForPromise(
-        db.eachAsync('SELECT * FROM Item ORDER BY id', this.rememberId)
-          .then(function () {
-            expect(ids).toEqual([1, 2, 3]);
-          })
+        db.eachAsync('SELECT * FROM Item ORDER BY id', this.rememberId).then(function () {
+          expect(ids).toEqual([1, 2, 3]);
+        })
       );
     });
 
@@ -202,6 +226,22 @@
             expect(ids).toEqual([1, 2]);
           })
       );
+    });
+
+    it('should allow cancellation in the callback', function () {
+      var promise, thisSpec = this;
+
+      function cancel(row) {
+        promise.cancel();
+      }
+
+      promise = db.eachAsync('SELECT * FROM Item ORDER BY id', cancel).then(function () {
+        thisSpec.fail('Promise did not fail as expected.')
+      }, function (error) {
+        expect(error.message).toEqual('Canceled');
+      });
+
+      waitsForPromise(promise);
     });
   });
 
@@ -231,6 +271,95 @@
     });
   });
 
+  describe('rowCounter scalar function', function () {
+    it('should support the ROWCOUNTER() scalar function', function () {
+      waitsForPromise(
+        db.allAsync("SELECT * FROM (SELECT name, ROWCOUNTER() as nr FROM Item) WHERE nr > 1").then(function (results) {
+          expect(results.length).toEqual(2);
+          expect(results[0].name).toEqual('Orange');
+          expect(results[1].name).toEqual('Banana');
+        })
+      );
+    });
+  });
+
+  describe('Events', function () {
+    function expectEvent(eventName, rowId, callback) {
+      var calledEventHandler = false;
+
+      runs(function () {
+        // make sure the event queue is drained of old events
+        window.setImmediate(function () {
+          db.addEventListener(eventName, function listener(event) {
+            expect(event.tableName).toEqual('Item');
+            expect(event.type).toEqual(eventName);
+            expect(event.rowId).toEqual(rowId);
+            calledEventHandler = true;
+          });
+
+          callback();
+        });
+      });
+
+      waitsFor(function () { return calledEventHandler === true; });
+    };
+
+    it('should fire oninsert', function () {
+      expectEvent('insert', 4, function () {
+        db.runAsync("INSERT INTO Item (name) VALUES (?)", ['Ananas']);
+      });
+    });
+
+    it('should fire onupdate', function () {
+      expectEvent('update', 2, function () {
+        db.runAsync(
+          "UPDATE Item SET price = :newPrice WHERE name = :name",
+          { name: 'Orange', newPrice: 0.9 });
+      });
+    });
+
+    it('should fire ondelete', function () {
+      expectEvent('delete', 1, function () {
+        db.runAsync("DELETE FROM Item WHERE name = ?", ['Apple']);
+      });
+    });
+  });
+
+  describe('Concurrency Handling', function () {
+    it('should support two concurrent connections', function () {
+      var tempFolder = Windows.Storage.ApplicationData.current.temporaryFolder,
+          dbFilename = tempFolder.path + "\\concurrencyTest.sqlite";
+
+      SQLite3.Database.enableSharedCache(true);
+
+      waitsForPromise(
+        SQLite3JS.openAsync(dbFilename)
+          .then(function (db1) {
+            return db1.runAsync("CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY, value TEXT)")
+          }).then(function (db1) {
+            return db1.runAsync("DELETE FROM TestData");
+          }).then(function (db1) {
+            return SQLite3JS.openAsync(dbFilename)
+              .then(function (db2) {
+                promises = [];
+                for (var i = 0; i < 50; i++) {
+                  var db = i % 2 ? db1 : db2;
+                  var promise = db.runAsync("INSERT INTO TestData (value) VALUES (?)", ["Value " + i]);
+                  promises.push(promise);
+                };
+                return WinJS.Promise.join(promises);
+              }).then(function () {
+                return SQLite3JS.openAsync(dbFilename);
+              }).then(function (db) {
+                return db.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
+              }).then(function (row) {
+                expect(row.rowCount).toEqual(50);
+              })
+          })
+      );
+    });
+  });
+
   describe('Error Handling', function () {
     it('should throw when creating an invalid database', function () {
       var thisSpec = this;
@@ -252,6 +381,14 @@
           thisSpec.fail('The error handler was not called.');
         }, function (error) {
           expect(error.resultCode).toEqual(SQLite3.ResultCode.error);
+        })
+      );
+    });
+
+    it('should report the error of the last statement', function () {
+      waitsForPromise(
+        db.runAsync('invalid sql').then(null, function (err) {
+          expect(db.getLastError()).toEqual('near \"invalid\": syntax error');
         })
       );
     });
@@ -346,8 +483,7 @@
       Windows.Storage.StorageFile.getFileFromApplicationUriAsync(sourceUri)
         .then(function (file) {
           return Windows.Storage.FileIO.readTextAsync(file)
-        })
-        .then(function (source) {
+        }).then(function (source) {
           expect(source).toPassJsLint();
         })
     );
