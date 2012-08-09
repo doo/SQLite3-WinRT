@@ -38,8 +38,13 @@
     <ClInclude Include="Common.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Database.h" />
+    <ClInclude Include="res\component_manifest.h" />
+    <ClInclude Include="res\product_version.h" />
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="Statement.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="res\component_manifest.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCTargetsPath Condition="'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and '$(VisualStudioVersion)' == ''">$(VCTargetsPath11)</VCTargetsPath>

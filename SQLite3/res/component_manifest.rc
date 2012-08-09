@@ -1,0 +1,105 @@
+/*
+  Include this into your WinRT compoment projects.
+
+  You need to have a component_manifest.h in your projects root. 
+  If you have this include in another sub-folder of your project you would have to set the "Additional Include Directories" on this file.
+
+  In your component_manifest you must specify the following pre-processor definitions:
+  * <code>COMPONENT_NAME</code> the name of the component
+  * <code>COMPONENT_DESCRIPTION</code> A short description of your component
+
+  The following definitions are optional:
+  * <code>COMPONENT_VERSION_MAJOR</code> Defaults to DOO_PRODUCT_VERSION_MAJOR
+  
+  tbc
+*/
+#ifdef APSTUDIO_INVOKED
+  #error this file cannot be edited in MSDEV. It should not be edited anyway.
+#else 
+
+#include "product_version.h"
+
+// Include a "component_manifest.h" file the project that contains this bundle_manifest.rc file.
+// If you place the "bundle_manifest.h" not in your projects root, you need to specify "Additional Include Directories" for this .rc file.
+#include "component_manifest.h"
+
+#ifndef COMPONENT_NAME
+  #error You forgot to #define COMPONENT_NAME in your component_manifest.h
+#endif
+
+#ifndef COMPONENT_DESCRIPTION
+  #error You forgot to #define COMPONENT_DESCRIPTION in your component_manifest.h
+#endif
+
+
+#ifndef COMPONENT_VERSION_MAJOR
+  #define COMPONENT_VERSION_MAJOR DOO_PRODUCT_VERSION_MAJOR
+#endif
+
+#ifndef COMPONENT_VERSION_MINOR
+  #define COMPONENT_VERSION_MINOR 0
+#endif
+
+#ifndef COMPONENT_VERSION_BUILD
+  #define COMPONENT_VERSION_BUILD 0
+#endif
+
+#ifndef COMPONENT_VERSION_STRING
+  #define COMPONENT_VERSION_STRING VERSION_STR(COMPONENT_VERSION_MAJOR,COMPONENT_VERSION_MINOR,0,COMPONENT_VERSION_BUILD)
+#endif
+
+#ifndef COMPONENT_VERSION
+  #define COMPONENT_VERSION COMPONENT_VERSION_MAJOR,COMPONENT_VERSION_MINOR,0,COMPONENT_VERSION_BUILD
+#endif 
+
+#ifndef COMPONENT_ORIGINAL_FILENAME
+  #define COMPONENT_ORIGINAL_FILENAME COMPONENT_NAME ".dll"
+#endif
+
+#include "afxres.h"
+
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION COMPONENT_VERSION
+ PRODUCTVERSION DOO_PRODUCT_VERSION
+ FILEFLAGSMASK 0x17L
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_DLL
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            // If you hit an error here, define COMPONENT_DESCRIPTION in your component_manifest.h
+            VALUE "FileDescription", COMPONENT_DESCRIPTION
+            VALUE "FileVersion", COMPONENT_VERSION_STRING
+            // If you hit an error here, define COMPONENT_NAME in your component_manifest.h
+            VALUE "InternalName", COMPONENT_NAME
+            VALUE "OriginalFilename", COMPONENT_ORIGINAL_FILENAME
+            
+            VALUE "CompanyName", DOO_COMPANY_NAME
+            VALUE "LegalCopyright", DOO_COPYRIGHT
+            VALUE "ProductName", DOO_PRODUCT_NAME
+            VALUE "ProductVersion", DOO_PRODUCT_VERSION_STRING
+            VALUE "Internet", "https://doo.net"
+#ifdef COMPONENT_AUTHOR
+            VALUE "Author", COMPONENT_AUTHOR
+#endif
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+#endif 

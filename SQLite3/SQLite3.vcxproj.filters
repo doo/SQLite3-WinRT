@@ -18,5 +18,16 @@
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="Statement.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="res\component_manifest.h">
+      <Filter>Resources</Filter>
+    </ClInclude>
+    <ClInclude Include="res\product_version.h">
+      <Filter>Resources</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="res\component_manifest.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
