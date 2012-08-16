@@ -18,7 +18,7 @@ namespace SQLite3 {
     static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
     static void EnableSharedCache(bool enable);
 
-    ~Database();
+    virtual ~Database();
 
     IAsyncAction^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
     IAsyncAction^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
