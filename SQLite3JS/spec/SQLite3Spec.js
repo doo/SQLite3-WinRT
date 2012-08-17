@@ -461,7 +461,7 @@
           white: true,
           nomen: true,
           bitwise: true,
-          predef: ['SQLite3', 'WinJS', 'Windows']
+          predef: ['SQLite3', 'WinJS', 'Windows', 'console']
         };
         if (JSLINT(this.actual, options)) {
           return true;
