@@ -1,7 +1,12 @@
 ﻿(function () {
   "use strict";
 
-  var Database, ItemDataSource, GroupDataSource;
+  var SQLite3JS, Database, ItemDataSource, GroupDataSource;
+
+  SQLite3JS = {
+    debug: false,
+    log: console.log.bind(console)
+  };
 
   function PromiseQueue() {
     this._items = [];
@@ -105,6 +110,11 @@
     var that, queue = new PromiseQueue();
 
     function callNativeAsync(funcName, sql, args, callback) {
+      if (SQLite3JS.debug) {
+        var argString = args ? ' ' + args.toString() : '';
+        SQLite3JS.log('Database#' + funcName + ': ' + sql + argString);
+      }
+
       return queue.append(function () {
         var preparedArgs = prepareArgs(args);
         if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
@@ -331,14 +341,11 @@
     }
   );
 
-  function openAsync(dbPath) {
+  SQLite3JS.openAsync = function (dbPath) {
     return SQLite3.Database.openAsync(dbPath).then(function (connection) {
       return wrapDatabase(connection);
     }, wrapException);
-  }
+  };
 
-  WinJS.Namespace.define('SQLite3JS', {
-    openAsync: openAsync
-  });
-
+  WinJS.Namespace.define('SQLite3JS', SQLite3JS);
 }());
