@@ -19,7 +19,15 @@ The API was inspired by [node-sqlite3][1].
 
  [1]: https://github.com/developmentseed/node-sqlite3/
 
-### Example
+### Setup & Usage
+
+First, you'll need to install the official SQLite3 distribution. In Visual Studio, select *Tools* ->
+*Extensions and Updates...* and browse for *SQLite for Windows Runtime* in the Online Visual Studio
+Gallery.
+
+Then, add a dependency on the *SQLite3* project from this repository and include the file 
+*SQLite3.js* in your JavaScript project.
+Now you're set up and ready to use the SQLite database in your JavaScript code like this:
 
     var dbPath = Windows.Storage.ApplicationData.current.localFolder.path + '\\db.sqlite';
     SQLite3JS.openAsync(dbPath)
