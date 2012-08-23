@@ -9,14 +9,12 @@
   <ItemGroup>
     <ClCompile Include="Constants.cpp" />
     <ClCompile Include="Database.cpp" />
-    <ClCompile Include="sqlite3.c" />
     <ClCompile Include="Statement.cpp" />
     <ClCompile Include="Common.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Database.h" />
-    <ClInclude Include="sqlite3.h" />
     <ClInclude Include="Statement.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="res\component_manifest.h">
