@@ -50,7 +50,7 @@
     <VCTargetsPath Condition="'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and '$(VisualStudioVersion)' == ''">$(VCTargetsPath11)</VCTargetsPath>
     <ProjectGuid>{4cf1ae34-d183-409b-90c3-d62167cff25d}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <ProjectName>SQLite3Wrapper</ProjectName>
+    <ProjectName>SQLite3Component</ProjectName>
     <RootNamespace>SQLite3</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
