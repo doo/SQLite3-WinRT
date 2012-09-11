@@ -1,6 +1,7 @@
 *.user
 *.sdf
 *.opensdf
+*.filters
 *.suo
 
 Debug/
