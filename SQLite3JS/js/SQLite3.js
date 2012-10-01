@@ -1,4 +1,4 @@
-﻿(function () {
+﻿var SQLite3JS = (function () {
   "use strict";
 
   var SQLite3JS, Database, ItemDataSource, GroupDataSource;
@@ -347,5 +347,5 @@
     }, wrapException);
   };
 
-  WinJS.Namespace.define('SQLite3JS', SQLite3JS);
+  return SQLite3JS;
 }());
