@@ -56,7 +56,7 @@
   #define COMPONENT_ORIGINAL_FILENAME COMPONENT_NAME ".dll"
 #endif
 
-#include "afxres.h"
+#include "winres.h"
 
 #ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
