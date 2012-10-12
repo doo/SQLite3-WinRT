@@ -1,0 +1,3 @@
+#define COMPONENT_NAME "SQLite3"
+#define COMPONENT_DESCRIPTION "SQLite3 WinRT Component"
+#define COMPONENT_VERSION_BUILD 9
