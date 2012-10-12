@@ -20,14 +20,14 @@ namespace SQLite3 {
 
     virtual ~Database();
 
-    IAsyncAction^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    IAsyncAction^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
-    IAsyncOperation<Platform::String^>^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    IAsyncOperation<Platform::String^>^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
-    IAsyncOperation<Platform::String^>^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    IAsyncOperation<Platform::String^>^ AllAsyncMap(Platform::String^ sql, ParameterMap^ params);
-    IAsyncAction^ EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
-    IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
+    void RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    void RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    Platform::String^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    Platform::String^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    Platform::String^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    Platform::String^ AllAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    void EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
+    void EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
     bool GetAutocommit();
     long long GetLastInsertRowId();
@@ -44,13 +44,13 @@ namespace SQLite3 {
     StatementPtr PrepareAndBind(Platform::String^ sql, ParameterContainer params);
 
     template <typename ParameterContainer>
-    IAsyncAction^ RunAsync(Platform::String^ sql, ParameterContainer params);
+    void RunAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    IAsyncOperation<Platform::String^>^ OneAsync(Platform::String^ sql, ParameterContainer params);
+    Platform::String^ OneAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    IAsyncOperation<Platform::String^>^ AllAsync(Platform::String^ sql, ParameterContainer params);
+    Platform::String^ AllAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    IAsyncAction^ EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
+    void EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 
     static void __cdecl UpdateHook(void* data, int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
     void OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);

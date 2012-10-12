@@ -107,21 +107,27 @@
   }
 
   function wrapDatabase(connection) {
-    var that, queue = new PromiseQueue();
+    var that;
 
     function callNativeAsync(funcName, sql, args, callback) {
+      var argString, preparedArgs, fullFuncName;
+
       if (SQLite3JS.debug) {
-        var argString = args ? ' ' + args.toString() : '';
+        argString = args ? ' ' + args.toString() : '';
         SQLite3JS.log('Database#' + funcName + ': ' + sql + argString);
       }
 
-      return queue.append(function () {
-        var preparedArgs = prepareArgs(args);
-        if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
-          return connection[funcName + "Map"](sql, preparedArgs, callback);
-        }
-        return connection[funcName + "Vector"](sql, preparedArgs, callback);
-      });
+      preparedArgs = prepareArgs(args);
+      fullFuncName =
+        preparedArgs instanceof Windows.Foundation.Collections.PropertySet
+        ? funcName + "Map"
+        : funcName + "Vector";
+
+      try {
+        return WinJS.Promise.wrap(connection[fullFuncName](sql, preparedArgs, callback));
+      } catch (error) {
+        return WinJS.Promise.wrapError(error);
+      }
     }
 
     function wrapExceptionWithLastError(exception) {

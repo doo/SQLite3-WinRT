@@ -87,88 +87,80 @@ namespace SQLite3 {
     }
   }
 
-  IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+  void Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
     return RunAsync(sql, CopyParameters(params));
   }
 
-  IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+  void Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
     return RunAsync(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() -> void {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        statement->Run();
-      } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  void Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      statement->Run();
+    } catch (Platform::Exception^ e) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
-  IAsyncOperation<Platform::String^>^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+  Platform::String^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
     return OneAsync(sql, CopyParameters(params));
   }
 
-  IAsyncOperation<Platform::String^>^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+  Platform::String^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
     return OneAsync(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncOperation<Platform::String^>^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() -> Platform::String^ {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        return statement->One();
-      } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  Platform::String^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->One();
+    } catch (Platform::Exception^ e) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
-  IAsyncOperation<Platform::String^>^ Database::AllAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+  Platform::String^ Database::AllAsyncMap(Platform::String^ sql, ParameterMap^ params) {
     return AllAsync(sql, params);
   }
 
-  IAsyncOperation<Platform::String^>^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+  Platform::String^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
     return AllAsync(sql, CopyParameters(params));
   }
 
   template <typename ParameterContainer>
-  IAsyncOperation<Platform::String^>^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() -> Platform::String^ {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        return statement->All();
-      } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  Platform::String^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->All();
+    } catch (Platform::Exception^ e) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
-  IAsyncAction^ Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
+  void Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
     return EachAsync(sql, CopyParameters(params), callback);
   }
 
-  IAsyncAction^ Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
+  void Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
     return EachAsync(sql, params, callback);
   }
 
   template <typename ParameterContainer>
-  IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
-    return Concurrency::create_async([this, sql, params, callback]() -> void {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        statement->Each(callback, dispatcher);
-      } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  void Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      statement->Each(callback, dispatcher);
+    } catch (Platform::Exception^ e) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
   void sqlite_row_counter(sqlite3_context* context,int ,sqlite3_value**) {
