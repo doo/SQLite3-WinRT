@@ -126,29 +126,25 @@
       try {
         return WinJS.Promise.wrap(connection[fullFuncName](sql, preparedArgs, callback));
       } catch (error) {
-        return WinJS.Promise.wrapError(error);
+        return wrapException(error, that.getLastError());
       }
-    }
-
-    function wrapExceptionWithLastError(exception) {
-      return wrapException(exception, that.getLastError());
     }
 
     that = {
       runAsync: function (sql, args) {
         return callNativeAsync('runAsync', sql, args).then(function () {
           return that;
-        }, wrapExceptionWithLastError);
+        });
       },
       oneAsync: function (sql, args) {
         return callNativeAsync('oneAsync', sql, args).then(function (row) {
           return row ? JSON.parse(row) : null;
-        }, wrapExceptionWithLastError);
+        });
       },
       allAsync: function (sql, args) {
         return callNativeAsync('allAsync', sql, args).then(function (rows) {
           return rows ? JSON.parse(rows) : null;
-        }, wrapExceptionWithLastError);
+        });
       },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -160,7 +156,7 @@
           callback(JSON.parse(row));
         }).then(function () {
           return that;
-        }, wrapExceptionWithLastError);
+        });
       },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
