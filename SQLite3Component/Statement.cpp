@@ -26,9 +26,9 @@ namespace SQLite3 {
     sqlite3_finalize(statement);
   }
 
-  void Statement::Bind(const SafeParameterVector& params) {
-    for (SafeParameterVector::size_type i = 0; i < params.size(); ++i) {
-      BindParameter(i + 1, params[i]);
+  void Statement::Bind(ParameterVector^ params) {
+    for (unsigned int i = 0; i < params->Size ; ++i) {
+      BindParameter(static_cast<int>(i + 1), params->GetAt(i));
     }
   }
 

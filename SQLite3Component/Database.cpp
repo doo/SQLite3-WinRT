@@ -9,16 +9,6 @@ using Windows::UI::Core::CoreWindow;
 using Windows::UI::Core::DispatchedHandler;
 
 namespace SQLite3 {
-  static SafeParameterVector CopyParameters(ParameterVector^ params) {
-    SafeParameterVector paramsCopy;
-
-    if (params) {
-      std::copy(begin(params), end(params), std::back_inserter(paramsCopy));
-    }
-
-    return paramsCopy;
-  }
-
   Database^ Database::Open(Platform::String^ dbPath) {
     sqlite3* sqlite;
     int ret = sqlite3_open16(dbPath->Data(), &sqlite);
@@ -84,7 +74,7 @@ namespace SQLite3 {
   }
 
   void Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return RunAsync(sql, CopyParameters(params));
+    return RunAsync(sql, params);
   }
 
   void Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
@@ -103,7 +93,7 @@ namespace SQLite3 {
   }
 
   Platform::String^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return OneAsync(sql, CopyParameters(params));
+    return OneAsync(sql, params);
   }
 
   Platform::String^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
@@ -126,7 +116,7 @@ namespace SQLite3 {
   }
 
   Platform::String^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return AllAsync(sql, CopyParameters(params));
+    return AllAsync(sql, params);
   }
 
   template <typename ParameterContainer>
@@ -141,7 +131,7 @@ namespace SQLite3 {
   }
 
   void Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
-    return EachAsync(sql, CopyParameters(params), callback);
+    return EachAsync(sql, params, callback);
   }
 
   void Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
