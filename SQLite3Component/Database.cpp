@@ -1,5 +1,4 @@
 #include <collection.h>
-#include <ppltasks.h>
 
 #include "Database.h"
 #include "Statement.h"
@@ -20,20 +19,17 @@ namespace SQLite3 {
     return paramsCopy;
   }
 
-  IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
-  CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
-    return Concurrency::create_async([dbPath, dispatcher]() -> Database^ {
-      sqlite3* sqlite;
+  Database^ Database::Open(Platform::String^ dbPath) {
+    sqlite3* sqlite;
+    int ret = sqlite3_open16(dbPath->Data(), &sqlite);
 
-      int ret = sqlite3_open16(dbPath->Data(), &sqlite);
+    if (ret != SQLITE_OK) {
+      sqlite3_close(sqlite);
+      throwSQLiteError(ret);
+    }
 
-      if (ret != SQLITE_OK) {
-        sqlite3_close(sqlite);
-        throwSQLiteError(ret);
-      }
-
+    CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
     return ref new Database(sqlite, dispatcher);
-    });
   }
 
   void Database::EnableSharedCache(bool enable) {

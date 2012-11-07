@@ -344,9 +344,12 @@
   );
 
   SQLite3JS.openAsync = function (dbPath) {
-    return SQLite3.Database.openAsync(dbPath).then(function (connection) {
-      return wrapDatabase(connection);
-    }, wrapException);
+    try {
+      var db = wrapDatabase(SQLite3.Database.open(dbPath));
+      return WinJS.Promise.wrap(db);
+    } catch (error) {
+      return wrapException(error);
+    }
   };
 
   return SQLite3JS;

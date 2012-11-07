@@ -15,7 +15,7 @@ namespace SQLite3 {
     friend void sqlite_row_counter(sqlite3_context*,int,sqlite3_value**);
 
   public:
-    static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
+    static Database^ Open(Platform::String^ dbPath);
     static void EnableSharedCache(bool enable);
 
     virtual ~Database();

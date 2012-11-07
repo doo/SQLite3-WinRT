@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <collection.h>
-#include <ppltasks.h>
 #include <sstream>
 #include <iomanip>
 #include "Statement.h"
