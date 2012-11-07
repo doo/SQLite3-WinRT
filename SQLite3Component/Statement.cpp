@@ -29,7 +29,7 @@ namespace SQLite3 {
 
   void Statement::Bind(const SafeParameterVector& params) {
     for (SafeParameterVector::size_type i = 0; i < params.size(); ++i) {
-      BindParameter(i + 1, params[i]);
+      BindParameter(static_cast<int>(i + 1), params[i]);
     }
   }
 
