@@ -7,8 +7,9 @@ Async SQLite for (JavaScript) Windows Store apps.
 Please note that _SQLite3-WinRT_ is currently in beta stage. The API covers the
 better part of every day use cases, but might still be missing some
 functionality or even change slightly in the future. However, it is already
-being used by certified apps on the Windows Store. Feedback and contributions
-are highly appreciated, feel free to open issues or pull requests on GitHub.
+being used by certified apps published in the Windows Store. Feedback and
+contributions are highly appreciated, feel free to open issues or pull requests
+on GitHub.
 
 ## Setup
 
