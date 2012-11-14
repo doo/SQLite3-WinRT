@@ -47,7 +47,6 @@ namespace SQLite3 {
     : sqlite(sqlite)
     , dispatcher(dispatcher) {
       sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
-      sqlite3_create_function(sqlite, "ROWCOUNTER", 0, SQLITE_ANY, reinterpret_cast<void*>(this), &sqlite_row_counter, NULL, NULL);
   }
 
   Database::~Database() {
@@ -171,11 +170,6 @@ namespace SQLite3 {
     });
   }
 
-  void sqlite_row_counter(sqlite3_context* context,int ,sqlite3_value**) {
-    Database^ db = reinterpret_cast<Database^>(sqlite3_user_data(context));
-    sqlite3_result_int64(context, ++db->statementRowCounter);
-  }
-
   bool Database::GetAutocommit() {
     return sqlite3_get_autocommit(sqlite) != 0;
   }
@@ -190,7 +184,6 @@ namespace SQLite3 {
 
   template <typename ParameterContainer>
   StatementPtr Database::PrepareAndBind(Platform::String^ sql, ParameterContainer params) {
-    statementRowCounter = 0;
     StatementPtr statement = Statement::Prepare(sqlite, sql);
     statement->Bind(params);
     return statement;

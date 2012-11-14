@@ -271,18 +271,6 @@
     });
   });
 
-  describe('rowCounter scalar function', function () {
-    it('should support the ROWCOUNTER() scalar function', function () {
-      waitsForPromise(
-        db.allAsync("SELECT * FROM (SELECT name, ROWCOUNTER() as nr FROM Item) WHERE nr > 1").then(function (results) {
-          expect(results.length).toEqual(2);
-          expect(results[0].name).toEqual('Orange');
-          expect(results[1].name).toEqual('Banana');
-        })
-      );
-    });
-  });
-
   describe('Events', function () {
     function expectEvent(eventName, rowId, callback) {
       var calledEventHandler = false;
