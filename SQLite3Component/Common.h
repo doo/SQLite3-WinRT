@@ -20,5 +20,7 @@ namespace SQLite3 {
 
   void throwSQLiteError(int resultCode);
   std::wstring ToWString(const char* utf8String);
+  std::wstring ToWString(const char* utf8String, unsigned int length);
   Platform::String^ ToPlatformString(const char* utf8String);
+  Platform::String^ ToPlatformString(const char* utf8String, unsigned int length);
 }

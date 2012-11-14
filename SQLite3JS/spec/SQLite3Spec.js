@@ -271,6 +271,41 @@
     });
   });
 
+  describe("Locale-specific Collation", function () {
+    var firstUserLanguage = Windows.System.UserProfile.GlobalizationPreferences.languages[0];
+    if (firstUserLanguage == 'de-DE') {
+      it('should support german collation', function () {
+        waitsForPromise(
+          db.runAsync("CREATE TABLE COLLATE_TEST (NAME TEXT PRIMARY KEY)")
+          .then(function () {
+            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Aber"])
+          }).then(function () {
+            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Anders"])
+          }).then(function () {
+            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Ändern"])
+          }).then(function () {
+            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Ähnlich2"])
+          }).then(function () {
+            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Ähnlich1"])
+          }).then(function () {
+            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Ameise"])
+          }).then(function () {
+            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Butterbrot"])
+          }).then(function () {
+            return db.allAsync("SELECT * FROM COLLATE_TEST ORDER BY NAME COLLATE WINLOCALE")
+          }).then(function (rows) {
+            expect(rows.length).toEqual(7);
+            expect(rows[0].NAME).toEqual("Aber");
+            expect(rows[1].NAME).toEqual("Ähnlich1");
+            expect(rows[2].NAME).toEqual("Ähnlich2");
+            expect(rows[3].NAME).toEqual("Ameise");
+            expect(rows[6].NAME).toEqual("Butterbrot");
+          })
+        );
+      });
+    };
+  });
+
   describe('Events', function () {
     function expectEvent(eventName, rowId, callback) {
       var calledEventHandler = false;

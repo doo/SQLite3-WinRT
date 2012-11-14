@@ -20,8 +20,26 @@ namespace SQLite3 {
     return paramsCopy;
   }
 
+  static int WinLocaleCollateUtf16(void *data, int str1Length, const void* str1Data, int str2Length, const void* str2Data) {
+    int compareResult = CompareStringEx(LOCALE_NAME_USER_DEFAULT, 
+                                        LINGUISTIC_IGNORECASE, 
+                                        (LPCWCH)str1Data, str1Length/2, 
+                                        (LPCWCH)str2Data, str2Length/2, 
+                                        NULL, NULL, 0);
+    if (compareResult == 0) {
+      throw ref new Platform::InvalidArgumentException();
+    }
+    return compareResult-2;
+  }
+
+  static int WinLocaleCollateUtf8(void* data, int str1Length, const void* str1Data, int str2Length, const void* str2Data) {
+    std::wstring string1 = ToWString((const char*)str1Data, str1Length);
+    std::wstring string2 = ToWString((const char*)str2Data, str2Length);
+    return WinLocaleCollateUtf16(data, string1.length()*2, string1.c_str(), string2.length()*2, string2.c_str());
+  }
+
   IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
-  CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
+    CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
     return Concurrency::create_async([dbPath, dispatcher]() -> Database^ {
       sqlite3* sqlite;
 
@@ -47,6 +65,8 @@ namespace SQLite3 {
     : sqlite(sqlite)
     , dispatcher(dispatcher) {
       sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
+      sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, nullptr, WinLocaleCollateUtf16, nullptr);
+      sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF8, nullptr, WinLocaleCollateUtf8, nullptr);
   }
 
   Database::~Database() {
