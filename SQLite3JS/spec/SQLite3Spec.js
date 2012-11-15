@@ -58,11 +58,11 @@
     it('should allow chaining', function () {
       waitsForPromise(
         db.runAsync('DELETE FROM Item WHERE id = 1')
-          .then(function (chainedDb) {
-            return chainedDb.oneAsync('SELECT COUNT(*) AS count FROM Item');
-          }).then(function (row) {
-            expect(row.count).toEqual(2);
-          })
+        .then(function (chainedDb) {
+          return chainedDb.oneAsync('SELECT COUNT(*) AS count FROM Item');
+        }).then(function (row) {
+          expect(row.count).toEqual(2);
+        })
       );
     });
 
@@ -71,13 +71,13 @@
 
       waitsForPromise(
         db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', [name, null, null])
-          .then(function () {
-            return db.oneAsync('SELECT * FROM Item WHERE name = ?', [name]);
-          }).then(function (row) {
-            expect(row.name).toEqual(name);
-            expect(row.price).toEqual(null);
-            expect(row.id).toEqual(null);
-          })
+        .then(function () {
+          return db.oneAsync('SELECT * FROM Item WHERE name = ?', [name]);
+        }).then(function (row) {
+          expect(row.name).toEqual(name);
+          expect(row.price).toEqual(null);
+          expect(row.id).toEqual(null);
+        })
       );
     });
 
@@ -87,12 +87,12 @@
 
       waitsForPromise(
         db.runAsync('INSERT INTO Item (name, dateBought) VALUES (?, ?)', [name, dateBought])
-          .then(function () {
-            return db.oneAsync('SELECT * FROM Item WHERE dateBought=?', [dateBought]);
-          }).then(function (row) {
-            expect(row.name).toEqual(name);
-            expect(new Date(row.dateBought)).toEqual(dateBought);
-          })
+        .then(function () {
+          return db.oneAsync('SELECT * FROM Item WHERE dateBought=?', [dateBought]);
+        }).then(function (row) {
+          expect(row.name).toEqual(name);
+          expect(new Date(row.dateBought)).toEqual(dateBought);
+        })
       );
     });
 
@@ -101,13 +101,13 @@
         db.runAsync(
           'INSERT INTO Item (name, price, id) VALUES (:name, :price, :id)',
           { name: 'Papaya', price: 5.2, id: 4 })
-          .then(function () {
-            return db.oneAsync(
-              'SELECT COUNT(*) AS cnt FROM Item WHERE price > :limit',
-              { limit: 5 });
-          }).then(function (row) {
-            expect(row.cnt).toEqual(1);
-          })
+        .then(function () {
+          return db.oneAsync(
+            'SELECT COUNT(*) AS cnt FROM Item WHERE price > :limit',
+            { limit: 5 });
+        }).then(function (row) {
+          expect(row.cnt).toEqual(1);
+        })
       );
     });
   });
@@ -145,12 +145,12 @@
       };
       waitsForPromise(
         db.runAsync('INSERT INTO Item(name) VALUES(:name)', rowToInsert)
-          .then(function () {
-            var id = db.getLastInsertRowId();
-            return db.oneAsync('SELECT * FROM Item WHERE rowId=?', [id]);
-          }).then(function (result) {
-            expect(result.name).toEqual("Foo\nBar'n");
-          })
+        .then(function () {
+          var id = db.getLastInsertRowId();
+          return db.oneAsync('SELECT * FROM Item WHERE rowId=?', [id]);
+        }).then(function (result) {
+          expect(result.name).toEqual("Foo\nBar'n");
+        })
       );
     });
   });
@@ -161,11 +161,11 @@
         db.allAsync(
           'SELECT * FROM Item WHERE name LIKE :pattern ORDER BY id ASC',
           { pattern: '%e' })
-          .then(function (rows) {
-            expect(rows.length).toEqual(2);
-            expect(rows[0].name).toEqual('Apple');
-            expect(rows[1].name).toEqual('Orange');
-          })
+        .then(function (rows) {
+          expect(rows.length).toEqual(2);
+          expect(rows[0].name).toEqual('Apple');
+          expect(rows[1].name).toEqual('Orange');
+        })
       );
     });
 
@@ -211,9 +211,9 @@
     it('should allow binding arguments', function () {
       waitsForPromise(
         db.eachAsync('SELECT * FROM Item WHERE price > ? ORDER BY id', [2], this.rememberId)
-          .then(function () {
-            expect(ids).toEqual([2, 3]);
-          })
+        .then(function () {
+          expect(ids).toEqual([2, 3]);
+        })
       );
     });
 
@@ -357,28 +357,28 @@
 
       waitsForPromise(
         SQLite3JS.openAsync(dbFilename)
-          .then(function (db1) {
-            return db1.runAsync("CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY, value TEXT)")
-          }).then(function (db1) {
-            return db1.runAsync("DELETE FROM TestData");
-          }).then(function (db1) {
-            return SQLite3JS.openAsync(dbFilename)
-              .then(function (db2) {
-                promises = [];
-                for (var i = 0; i < 50; i++) {
-                  var db = i % 2 ? db1 : db2;
-                  var promise = db.runAsync("INSERT INTO TestData (value) VALUES (?)", ["Value " + i]);
-                  promises.push(promise);
-                };
-                return WinJS.Promise.join(promises);
-              }).then(function () {
-                return SQLite3JS.openAsync(dbFilename);
-              }).then(function (db) {
-                return db.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
-              }).then(function (row) {
-                expect(row.rowCount).toEqual(50);
-              })
+        .then(function (db1) {
+          return db1.runAsync("CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY, value TEXT)")
+        }).then(function (db1) {
+          return db1.runAsync("DELETE FROM TestData");
+        }).then(function (db1) {
+          return SQLite3JS.openAsync(dbFilename)
+          .then(function (db2) {
+            promises = [];
+            for (var i = 0; i < 50; i++) {
+              var db = i % 2 ? db1 : db2;
+              var promise = db.runAsync("INSERT INTO TestData (value) VALUES (?)", ["Value " + i]);
+              promises.push(promise);
+            };
+            return WinJS.Promise.join(promises);
+          }).then(function () {
+            return SQLite3JS.openAsync(dbFilename);
+          }).then(function (db) {
+            return db.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
+          }).then(function (row) {
+            expect(row.rowCount).toEqual(50);
           })
+        })
       );
     });
   });
@@ -504,11 +504,11 @@
 
     waitsForPromise(
       Windows.Storage.StorageFile.getFileFromApplicationUriAsync(sourceUri)
-        .then(function (file) {
-          return Windows.Storage.FileIO.readTextAsync(file)
-        }).then(function (source) {
-          expect(source).toPassJsLint();
-        })
+      .then(function (file) {
+        return Windows.Storage.FileIO.readTextAsync(file)
+      }).then(function (source) {
+        expect(source).toPassJsLint();
+      })
     );
   });
 });
