@@ -276,30 +276,30 @@
     if (firstUserLanguage == 'de-DE') {
       it('should support german collation', function () {
         waitsForPromise(
-          db.runAsync("CREATE TABLE COLLATE_TEST (NAME TEXT PRIMARY KEY)")
+          db.runAsync("CREATE TABLE CollateTest (name TEXT PRIMARY KEY)")
           .then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Aber"])
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Aber"])
           }).then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Anders"])
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Anders"])
           }).then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Ändern"])
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Ändern"])
           }).then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Ähnlich2"])
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Ähnlich2"])
           }).then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Ähnlich1"])
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Ähnlich1"])
           }).then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Ameise"])
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Ameise"])
           }).then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Butterbrot"])
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Butterbrot"])
           }).then(function () {
-            return db.allAsync("SELECT * FROM COLLATE_TEST ORDER BY NAME COLLATE WINLOCALE")
+            return db.allAsync("SELECT * FROM CollateTest ORDER BY name COLLATE WINLOCALE")
           }).then(function (rows) {
             expect(rows.length).toEqual(7);
-            expect(rows[0].NAME).toEqual("Aber");
-            expect(rows[1].NAME).toEqual("Ähnlich1");
-            expect(rows[2].NAME).toEqual("Ähnlich2");
-            expect(rows[3].NAME).toEqual("Ameise");
-            expect(rows[6].NAME).toEqual("Butterbrot");
+            expect(rows[0].name).toEqual("Aber");
+            expect(rows[1].name).toEqual("Ähnlich1");
+            expect(rows[2].name).toEqual("Ähnlich2");
+            expect(rows[3].name).toEqual("Ameise");
+            expect(rows[6].name).toEqual("Butterbrot");
           })
         );
       });
