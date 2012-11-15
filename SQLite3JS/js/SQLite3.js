@@ -221,7 +221,7 @@
         },
         getCount: function () {
           return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + this._sql + ')', this._args)
-            .then(function (row) { return row.cnt; });
+          .then(function (row) { return row.cnt; });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
           var items,
