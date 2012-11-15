@@ -277,29 +277,29 @@
     describe("Locale-specific Collation", function () {
       beforeEach(function () {
         waitsForPromise(
-          db.runAsync("CREATE TABLE COLLATE_TEST (NAME TEXT COLLATE WINLOCALE)").then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Lj"]);
+          db.runAsync("CREATE TABLE CollateTest (name TEXT COLLATE WINLOCALE)").then(function () {
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Lj"]);
           }).then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["Lz"]);
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Lz"]);
           }).then(function () {
-            return db.runAsync("INSERT INTO COLLATE_TEST VALUES (?)", ["La"]);
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["La"]);
           })
         );
       });
 
       afterEach(function () {
         waitsForPromise(
-          db.runAsync("DROP TABLE COLLATE_TEST")
+          db.runAsync("DROP TABLE CollateTest")
         );
       });
 
       it('should support english collation', function () {
         db.collationLanguage = "en-US";
         waitsForPromise(
-          db.allAsync("SELECT * FROM COLLATE_TEST ORDER BY NAME").then(function (rows) {
-            expect(rows[0].NAME).toEqual("La");
-            expect(rows[1].NAME).toEqual("Lj");
-            expect(rows[2].NAME).toEqual("Lz");
+          db.allAsync("SELECT * FROM CollateTest ORDER BY name").then(function (rows) {
+            expect(rows[0].name).toEqual("La");
+            expect(rows[1].name).toEqual("Lj");
+            expect(rows[2].name).toEqual("Lz");
           })
         );
       });
@@ -307,10 +307,10 @@
       it('should support bosnian collation', function () {
         db.collationLanguage = "bs-Latn-BA";
         waitsForPromise(
-          db.allAsync("SELECT * FROM COLLATE_TEST ORDER BY NAME").then(function (rows) {
-            expect(rows[0].NAME).toEqual("La");
-            expect(rows[1].NAME).toEqual("Lz");
-            expect(rows[2].NAME).toEqual("Lj");
+          db.allAsync("SELECT * FROM CollateTest ORDER BY name").then(function (rows) {
+            expect(rows[0].name).toEqual("La");
+            expect(rows[1].name).toEqual("Lz");
+            expect(rows[2].name).toEqual("Lj");
           })
         );
       });
