@@ -499,7 +499,8 @@
               predef: [
                 'SQLite3', 'WinJS', 'Windows', 'console', 'document', 'setImmediate',
                 'SQLite3JS', 'JSLINT',
-                'jasmine', 'describe', 'it', 'expect', 'runs', 'waitsFor', 'beforeEach', 'afterEach'
+                'jasmine', 'describe', 'xdescribe', 'it', 'xit', 'beforeEach', 'afterEach',
+                'expect', 'runs', 'waitsFor'
               ]
             };
 
