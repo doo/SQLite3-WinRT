@@ -289,8 +289,8 @@
 
       afterEach(function () {
         waitsForPromise(
-          db.runAsync("DROP TABLE COLLATE_TEST");
-        )
+          db.runAsync("DROP TABLE COLLATE_TEST")
+        );
       });
 
       it('should support english collation', function () {
