@@ -25,7 +25,7 @@ _PROJECT > Add Reference..._. Now, the _SQLite3JS_ source
 `SQLite3JS\js\SQLite3.js` can be used in the app's project.
 
 Note for users of Visual Studio 2012 Express: To compile the WinRT component
-successfully, please install the Windows SDK [1].
+successfully, please install the [Windows SDK][1].
 
  [1]: http://msdn.microsoft.com/en-us/windows/desktop/hh852363.aspx
 
