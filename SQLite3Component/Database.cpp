@@ -64,11 +64,11 @@ namespace SQLite3 {
   }
 
   Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
-    : sqlite(sqlite)
-    , dispatcher(dispatcher) {
+    : collationLanguage(nullptr) // will use user locale
+    , dispatcher(dispatcher)
+    , sqlite(sqlite) {
       sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
 
-      collationLanguage = nullptr; // will use user locale
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, reinterpret_cast<void*>(this), WinLocaleCollateUtf16, nullptr);
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF8, reinterpret_cast<void*>(this), WinLocaleCollateUtf8, nullptr);
   }
