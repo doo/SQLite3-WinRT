@@ -275,38 +275,45 @@
     });
 
     describe("Locale-specific Collation", function () {
-      var firstUserLanguage = Windows.System.UserProfile.GlobalizationPreferences.languages[0];
-      if (firstUserLanguage === 'de-DE') {
-        it('should support german collation', function () {
-          waitsForPromise(
-            db.runAsync("CREATE TABLE CollateTest (name TEXT PRIMARY KEY)")
-            .then(function () {
-              return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Aber"]);
-            }).then(function () {
-              return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Anders"]);
-            }).then(function () {
-              return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Ändern"]);
-            }).then(function () {
-              return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Ähnlich2"]);
-            }).then(function () {
-              return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Ähnlich1"]);
-            }).then(function () {
-              return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Ameise"]);
-            }).then(function () {
-              return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Butterbrot"]);
-            }).then(function () {
-              return db.allAsync("SELECT * FROM CollateTest ORDER BY name COLLATE WINLOCALE");
-            }).then(function (rows) {
-              expect(rows.length).toEqual(7);
-              expect(rows[0].name).toEqual("Aber");
-              expect(rows[1].name).toEqual("Ähnlich1");
-              expect(rows[2].name).toEqual("Ähnlich2");
-              expect(rows[3].name).toEqual("Ameise");
-              expect(rows[6].name).toEqual("Butterbrot");
-            })
-          );
-        });
-      }
+      beforeEach(function () {
+        waitsForPromise(
+          db.runAsync("CREATE TABLE CollateTest (name TEXT COLLATE WINLOCALE)").then(function () {
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Lj"]);
+          }).then(function () {
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Lz"]);
+          }).then(function () {
+            return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["La"]);
+          })
+        );
+      });
+
+      afterEach(function () {
+        waitsForPromise(
+          db.runAsync("DROP TABLE CollateTest")
+        );
+      });
+
+      it('should support english collation', function () {
+        db.collationLanguage = "en-US";
+        waitsForPromise(
+          db.allAsync("SELECT * FROM CollateTest ORDER BY name").then(function (rows) {
+            expect(rows[0].name).toEqual("La");
+            expect(rows[1].name).toEqual("Lj");
+            expect(rows[2].name).toEqual("Lz");
+          })
+        );
+      });
+
+      it('should support bosnian collation', function () {
+        db.collationLanguage = "bs-Latn-BA";
+        waitsForPromise(
+          db.allAsync("SELECT * FROM CollateTest ORDER BY name").then(function (rows) {
+            expect(rows[0].name).toEqual("La");
+            expect(rows[1].name).toEqual("Lz");
+            expect(rows[2].name).toEqual("Lj");
+          })
+        );
+      });
     });
 
     describe('Events', function () {

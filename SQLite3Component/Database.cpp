@@ -21,8 +21,10 @@ namespace SQLite3 {
   }
 
   static int WinLocaleCollateUtf16(void *data, int str1Length, const void* str1Data, int str2Length, const void* str2Data) {
-    int compareResult = CompareStringEx(LOCALE_NAME_USER_DEFAULT, 
-                                        LINGUISTIC_IGNORECASE, 
+    Database^ db = reinterpret_cast<Database^>(data);
+    Platform::String^ language = db->CollationLanguage;
+    int compareResult = CompareStringEx(language ? language->Data() : LOCALE_NAME_USER_DEFAULT, 
+                                        LINGUISTIC_IGNORECASE|LINGUISTIC_IGNOREDIACRITIC, 
                                         (LPCWCH)str1Data, str1Length/2, 
                                         (LPCWCH)str2Data, str2Length/2, 
                                         NULL, NULL, 0);
@@ -62,11 +64,13 @@ namespace SQLite3 {
   }
 
   Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
-    : sqlite(sqlite)
-    , dispatcher(dispatcher) {
+    : collationLanguage(nullptr) // will use user locale
+    , dispatcher(dispatcher)
+    , sqlite(sqlite) {
       sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
-      sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, nullptr, WinLocaleCollateUtf16, nullptr);
-      sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF8, nullptr, WinLocaleCollateUtf8, nullptr);
+
+      sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, reinterpret_cast<void*>(this), WinLocaleCollateUtf16, nullptr);
+      sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF8, reinterpret_cast<void*>(this), WinLocaleCollateUtf8, nullptr);
   }
 
   Database::~Database() {
