@@ -1,23 +1,41 @@
 # SQLite3-WinRT
 
-Async SQLite for WinRT (Windows Metro) applications.
+Async SQLite for (JavaScript) Windows Store apps.
 
 ## Status
 
-Please note that _SQLite3-WinRT_ is in an early stage of development. The API is
-incomplete, still likely to change, and it hasn't been used in apps published
-via the Windows Store, yet. Nonetheless, _SQLite3-WinRT_ is intended for
-production use and Windows Store compatibility, and it will mature as the
-Windows 8 platform itself matures. Feedback and contributions are highly
-appreciated, feel free to open issues or pull requests on GitHub.
+Please note that _SQLite3-WinRT_ is currently in beta stage. The API covers the
+better part of every day use cases, but might still be missing some
+functionality or even change slightly in the future. However, it is already
+being used by certified apps published in the Windows Store. Feedback and
+contributions are highly appreciated, feel free to open issues or pull requests
+on GitHub.
 
-## SQLite3JS Namespace
+## Setup
 
-The SQLite3JS namespace provides an async JavaScript API for SQLite. It is built
+_SQLite3-WinRT_ consists of two parts, a WinRT component named
+_SQLite3Component_ and a JavaScript namespace called _SQLite3JS_ that builds
+upon the _SQLite3Component_.
+
+Therefore, in order to use _SQLite3JS_ in a JavaScript app, the
+_SQLite3Component_ project `SQLite3Component\SQLite3Component.vcxproj` must be
+added to the app's solution using _FILE > Add > Existing Project..._.
+A reference to _SQLite3Component_ must be added to the app's project using
+_PROJECT > Add Reference..._. Now, the _SQLite3JS_ source
+`SQLite3JS\js\SQLite3.js` can be used in the app's project.
+
+Note for users of Visual Studio 2012 Express: To compile the WinRT component
+successfully, please install the [Windows SDK][1].
+
+ [1]: http://msdn.microsoft.com/en-us/windows/desktop/hh852363.aspx
+
+## Usage
+
+The _SQLite3JS_ namespace provides an async JavaScript API for SQLite. It is built
 around the `Database` object that can be obtained using `SQLite3JS.openAsync()`.
-The API was inspired by [node-sqlite3][1].
+The API was inspired by [node-sqlite3][2].
 
- [1]: https://github.com/developmentseed/node-sqlite3/
+ [2]: https://github.com/developmentseed/node-sqlite3/
 
 ### Example
 
@@ -37,12 +55,6 @@ The API was inspired by [node-sqlite3][1].
       .then(function (db) {
         db.close();
       });
-
-## SQLite3 WinRT Component
-
-In addition to the JavaScript API, SQLite3-WinRT contains a WinRT component DLL
-called SQLite3. This component is the basis for SQLite3JS, but it can also be
-used directly, e.g. in a C# app.
 
 ## License
 

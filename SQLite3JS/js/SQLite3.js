@@ -211,6 +211,12 @@
       WinJS.Utilities.createEventProperties('update', 'delete', 'insert')
     );
 
+    Object.defineProperty(that, "collationLanguage", {
+      set: function (value) { connection.collationLanguage = value; },
+      get: function () { return connection.collationLanguage; },
+      enumerable: true
+    });
+
     return that;
   }
 
@@ -223,7 +229,7 @@
         },
         getCount: function () {
           return db.oneAsync('SELECT COUNT(*) AS cnt FROM (' + this._sql + ')', this._args)
-            .then(function (row) { return row.cnt; });
+          .then(function (row) { return row.cnt; });
         },
         itemsFromIndex: function (requestIndex, countBefore, countAfter) {
           var items,

@@ -9,6 +9,26 @@ using Windows::UI::Core::CoreWindow;
 using Windows::UI::Core::DispatchedHandler;
 
 namespace SQLite3 {
+  static int WinLocaleCollateUtf16(void *data, int str1Length, const void* str1Data, int str2Length, const void* str2Data) {
+    Database^ db = reinterpret_cast<Database^>(data);
+    Platform::String^ language = db->CollationLanguage;
+    int compareResult = CompareStringEx(language ? language->Data() : LOCALE_NAME_USER_DEFAULT, 
+                                        LINGUISTIC_IGNORECASE|LINGUISTIC_IGNOREDIACRITIC, 
+                                        (LPCWCH)str1Data, str1Length/2, 
+                                        (LPCWCH)str2Data, str2Length/2, 
+                                        NULL, NULL, 0);
+    if (compareResult == 0) {
+      throw ref new Platform::InvalidArgumentException();
+    }
+    return compareResult-2;
+  }
+
+  static int WinLocaleCollateUtf8(void* data, int str1Length, const void* str1Data, int str2Length, const void* str2Data) {
+    std::wstring string1 = ToWString((const char*)str1Data, str1Length);
+    std::wstring string2 = ToWString((const char*)str2Data, str2Length);
+    return WinLocaleCollateUtf16(data, string1.length()*2, string1.c_str(), string2.length()*2, string2.c_str());
+  }
+
   Database^ Database::Open(Platform::String^ dbPath) {
     sqlite3* sqlite;
     int ret = sqlite3_open16(dbPath->Data(), &sqlite);
@@ -30,10 +50,13 @@ namespace SQLite3 {
   }
 
   Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
-    : sqlite(sqlite)
-    , dispatcher(dispatcher) {
+    : collationLanguage(nullptr) // will use user locale
+    , dispatcher(dispatcher)
+    , sqlite(sqlite) {
       sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
-      sqlite3_create_function(sqlite, "ROWCOUNTER", 0, SQLITE_ANY, reinterpret_cast<void*>(this), &sqlite_row_counter, NULL, NULL);
+
+      sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, reinterpret_cast<void*>(this), WinLocaleCollateUtf16, nullptr);
+      sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF8, reinterpret_cast<void*>(this), WinLocaleCollateUtf8, nullptr);
   }
 
   Database::~Database() {
@@ -149,11 +172,6 @@ namespace SQLite3 {
     }
   }
 
-  void sqlite_row_counter(sqlite3_context* context,int ,sqlite3_value**) {
-    Database^ db = reinterpret_cast<Database^>(sqlite3_user_data(context));
-    sqlite3_result_int64(context, ++db->statementRowCounter);
-  }
-
   bool Database::GetAutocommit() {
     return sqlite3_get_autocommit(sqlite) != 0;
   }
@@ -168,7 +186,6 @@ namespace SQLite3 {
 
   template <typename ParameterContainer>
   StatementPtr Database::PrepareAndBind(Platform::String^ sql, ParameterContainer params) {
-    statementRowCounter = 0;
     StatementPtr statement = Statement::Prepare(sqlite, sql);
     statement->Bind(params);
     return statement;

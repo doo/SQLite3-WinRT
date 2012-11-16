@@ -12,8 +12,6 @@ namespace SQLite3 {
   public delegate void ChangeHandler(Platform::Object^ source, ChangeEvent event);
   
   public ref class Database sealed {
-    friend void sqlite_row_counter(sqlite3_context*,int,sqlite3_value**);
-
   public:
     static Database^ Open(Platform::String^ dbPath);
     static void EnableSharedCache(bool enable);
@@ -37,6 +35,15 @@ namespace SQLite3 {
     event ChangeHandler^ Update;
     event ChangeHandler^ Delete;
 
+    property Platform::String^ CollationLanguage {
+      Platform::String^ get() {
+        return collationLanguage;
+      }
+      void set(Platform::String^ value) {
+        collationLanguage = value;
+      }
+    }
+
   private:
     Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^ dispatcher);
 
@@ -55,7 +62,7 @@ namespace SQLite3 {
     static void __cdecl UpdateHook(void* data, int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
     void OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
 
-    sqlite_int64 statementRowCounter;
+    Platform::String^ collationLanguage;
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
     std::wstring lastErrorMsg;

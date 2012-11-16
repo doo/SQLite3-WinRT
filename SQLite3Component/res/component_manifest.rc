@@ -56,7 +56,7 @@
   #define COMPONENT_ORIGINAL_FILENAME COMPONENT_NAME ".dll"
 #endif
 
-#include "afxres.h"
+#include "winres.h"
 
 #ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
@@ -64,42 +64,42 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #endif //_WIN32
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION COMPONENT_VERSION
- PRODUCTVERSION DOO_PRODUCT_VERSION
- FILEFLAGSMASK 0x17L
+	FILEVERSION COMPONENT_VERSION
+	PRODUCTVERSION DOO_PRODUCT_VERSION
+	FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
- FILEFLAGS VS_FF_DEBUG
+	FILEFLAGS VS_FF_DEBUG
 #else
- FILEFLAGS 0x0L
+	FILEFLAGS 0x0L
 #endif
- FILEOS VOS_NT_WINDOWS32
- FILETYPE VFT_DLL
- FILESUBTYPE 0x0L
+	FILEOS VOS_NT_WINDOWS32
+	FILETYPE VFT_DLL
+	FILESUBTYPE 0x0L
 BEGIN
-    BLOCK "StringFileInfo"
-    BEGIN
-        BLOCK "040904b0"
-        BEGIN
-            // If you hit an error here, define COMPONENT_DESCRIPTION in your component_manifest.h
-            VALUE "FileDescription", COMPONENT_DESCRIPTION
-            VALUE "FileVersion", COMPONENT_VERSION_STRING
-            // If you hit an error here, define COMPONENT_NAME in your component_manifest.h
-            VALUE "InternalName", COMPONENT_NAME
-            VALUE "OriginalFilename", COMPONENT_ORIGINAL_FILENAME
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904b0"
+		BEGIN
+			// If you hit an error here, define COMPONENT_DESCRIPTION in your component_manifest.h
+			VALUE "FileDescription", COMPONENT_DESCRIPTION
+			VALUE "FileVersion", COMPONENT_VERSION_STRING
+			// If you hit an error here, define COMPONENT_NAME in your component_manifest.h
+			VALUE "InternalName", COMPONENT_NAME
+			VALUE "OriginalFilename", COMPONENT_ORIGINAL_FILENAME
             
-            VALUE "CompanyName", DOO_COMPANY_NAME
-            VALUE "LegalCopyright", DOO_COPYRIGHT
-            VALUE "ProductName", DOO_PRODUCT_NAME
-            VALUE "ProductVersion", DOO_PRODUCT_VERSION_STRING
-            VALUE "Internet", "https://doo.net"
+			VALUE "CompanyName", DOO_COMPANY_NAME
+			VALUE "LegalCopyright", DOO_COPYRIGHT
+			VALUE "ProductName", DOO_PRODUCT_NAME
+			VALUE "ProductVersion", DOO_PRODUCT_VERSION_STRING
+			VALUE "Internet", "https://doo.net"
 #ifdef COMPONENT_AUTHOR
-            VALUE "Author", COMPONENT_AUTHOR
+			VALUE "Author", COMPONENT_AUTHOR
 #endif
-        END
-    END
-    BLOCK "VarFileInfo"
-    BEGIN
-        VALUE "Translation", 0x409, 1200
-    END
+		END
+	END
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x409, 1200
+	END
 END
-#endif 
+#endif
