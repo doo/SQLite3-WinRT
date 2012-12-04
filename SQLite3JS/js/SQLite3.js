@@ -202,6 +202,12 @@
       close: function () {
         connection.close();
       },
+      vacuumAsync: function () {
+        return new WinJS.Promise( function(complete) {
+          connection.vacuumAsync();
+          complete();
+        });
+      },
       addEventListener: connection.addEventListener.bind(connection),
       removeEventListener: connection.removeEventListener.bind(connection)
     };

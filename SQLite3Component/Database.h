@@ -16,6 +16,9 @@ namespace SQLite3 {
     static Database^ Open(Platform::String^ dbPath);
     static void EnableSharedCache(bool enable);
 
+    Database() : vacuumRunning(false), sqlite(nullptr) {
+    }
+
     virtual ~Database();
 
     void RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
@@ -26,6 +29,8 @@ namespace SQLite3 {
     Platform::String^ AllAsyncMap(Platform::String^ sql, ParameterMap^ params);
     void EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
     void EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
+
+    void VacuumAsync();
 
     bool GetAutocommit();
     long long GetLastInsertRowId();
@@ -62,6 +67,7 @@ namespace SQLite3 {
     static void __cdecl UpdateHook(void* data, int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
     void OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
 
+    bool vacuumRunning;
     Platform::String^ collationLanguage;
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
