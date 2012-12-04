@@ -75,6 +75,8 @@ namespace SQLite3 {
   }
 
   void Database::OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
+    // See http://social.msdn.microsoft.com/Forums/en-US/winappswithcsharp/thread/d778c6e0-c248-4a1a-9391-28d038247578
+    // Too many dispatched events fill the Windows Message queue and this will raise an QUOTA_EXCEEDED error
     if (!vacuumRunning) {
       DispatchedHandler^ handler;
       ChangeEvent event;
