@@ -27,12 +27,20 @@ namespace SQLite3 {
   }
 
   void Statement::Bind(ParameterVector^ params) {
+    if (!params) {
+      return;
+    }
+
     for (unsigned int i = 0; i < params->Size ; ++i) {
       BindParameter(static_cast<int>(i + 1), params->GetAt(i));
     }
   }
 
   void Statement::Bind(ParameterMap^ params) {
+    if (!params) {
+      return;
+    }
+
     for (int i = 0; i < BindParameterCount(); ++i) {
       int index = i + 1;
       auto nameWithoutPrefix = BindParameterName(index).substr(1);
