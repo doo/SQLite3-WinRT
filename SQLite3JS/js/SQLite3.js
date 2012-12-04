@@ -107,42 +107,44 @@
   }
 
   function wrapDatabase(connection) {
-    var that, queue = new PromiseQueue();
+    var that;
 
     function callNativeAsync(funcName, sql, args, callback) {
+      var argString, preparedArgs, fullFuncName;
+
       if (SQLite3JS.debug) {
-        var argString = args ? ' ' + args.toString() : '';
+        argString = args ? ' ' + args.toString() : '';
         SQLite3JS.log('Database#' + funcName + ': ' + sql + argString);
       }
 
-      return queue.append(function () {
-        var preparedArgs = prepareArgs(args);
-        if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
-          return connection[funcName + "Map"](sql, preparedArgs, callback);
-        }
-        return connection[funcName + "Vector"](sql, preparedArgs, callback);
-      });
-    }
+      preparedArgs = prepareArgs(args);
+      fullFuncName =
+        preparedArgs instanceof Windows.Foundation.Collections.PropertySet
+        ? funcName + "Map"
+        : funcName + "Vector";
 
-    function wrapExceptionWithLastError(exception) {
-      return wrapException(exception, that.getLastError());
+      try {
+        return WinJS.Promise.wrap(connection[fullFuncName](sql, preparedArgs, callback));
+      } catch (error) {
+        return wrapException(error, that.getLastError());
+      }
     }
 
     that = {
       runAsync: function (sql, args) {
         return callNativeAsync('runAsync', sql, args).then(function () {
           return that;
-        }, wrapExceptionWithLastError);
+        });
       },
       oneAsync: function (sql, args) {
         return callNativeAsync('oneAsync', sql, args).then(function (row) {
           return row ? JSON.parse(row) : null;
-        }, wrapExceptionWithLastError);
+        });
       },
       allAsync: function (sql, args) {
         return callNativeAsync('allAsync', sql, args).then(function (rows) {
           return rows ? JSON.parse(rows) : null;
-        }, wrapExceptionWithLastError);
+        });
       },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -154,7 +156,7 @@
           callback(JSON.parse(row));
         }).then(function () {
           return that;
-        }, wrapExceptionWithLastError);
+        });
       },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -199,6 +201,12 @@
       },
       close: function () {
         connection.close();
+      },
+      vacuumAsync: function () {
+        return new WinJS.Promise( function(complete) {
+          connection.vacuumAsync();
+          complete();
+        });
       },
       addEventListener: connection.addEventListener.bind(connection),
       removeEventListener: connection.removeEventListener.bind(connection)
@@ -348,9 +356,12 @@
   );
 
   SQLite3JS.openAsync = function (dbPath) {
-    return SQLite3.Database.openAsync(dbPath).then(function (connection) {
-      return wrapDatabase(connection);
-    }, wrapException);
+    try {
+      var db = wrapDatabase(SQLite3.Database.open(dbPath));
+      return WinJS.Promise.wrap(db);
+    } catch (error) {
+      return wrapException(error);
+    }
   };
 
   return SQLite3JS;

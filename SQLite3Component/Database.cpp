@@ -1,5 +1,4 @@
 #include <collection.h>
-#include <ppltasks.h>
 
 #include "Database.h"
 #include "Statement.h"
@@ -10,16 +9,6 @@ using Windows::UI::Core::CoreWindow;
 using Windows::UI::Core::DispatchedHandler;
 
 namespace SQLite3 {
-  static SafeParameterVector CopyParameters(ParameterVector^ params) {
-    SafeParameterVector paramsCopy;
-
-    if (params) {
-      std::copy(begin(params), end(params), std::back_inserter(paramsCopy));
-    }
-
-    return paramsCopy;
-  }
-
   static int WinLocaleCollateUtf16(void *data, int str1Length, const void* str1Data, int str2Length, const void* str2Data) {
     Database^ db = reinterpret_cast<Database^>(data);
     Platform::String^ language = db->CollationLanguage;
@@ -40,20 +29,17 @@ namespace SQLite3 {
     return WinLocaleCollateUtf16(data, string1.length()*2, string1.c_str(), string2.length()*2, string2.c_str());
   }
 
-  IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
+  Database^ Database::Open(Platform::String^ dbPath) {
+    sqlite3* sqlite;
+    int ret = sqlite3_open16(dbPath->Data(), &sqlite);
+
+    if (ret != SQLITE_OK) {
+      sqlite3_close(sqlite);
+      throwSQLiteError(ret);
+    }
+
     CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
-    return Concurrency::create_async([dbPath, dispatcher]() -> Database^ {
-      sqlite3* sqlite;
-
-      int ret = sqlite3_open16(dbPath->Data(), &sqlite);
-
-      if (ret != SQLITE_OK) {
-        sqlite3_close(sqlite);
-        throwSQLiteError(ret);
-      }
-
     return ref new Database(sqlite, dispatcher);
-    });
   }
 
   void Database::EnableSharedCache(bool enable) {
@@ -82,116 +68,118 @@ namespace SQLite3 {
     database->OnChange(action, dbName, tableName, rowId);
   }
 
+  void Database::VacuumAsync() {
+    vacuumRunning = true;
+    RunAsync("VACUUM", reinterpret_cast<ParameterVector^>(nullptr));
+    vacuumRunning = false;
+  }
+
   void Database::OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
-    DispatchedHandler^ handler;
-    ChangeEvent event;
-    event.RowId = rowId;
-    event.TableName = ToPlatformString(tableName);
+    // See http://social.msdn.microsoft.com/Forums/en-US/winappswithcsharp/thread/d778c6e0-c248-4a1a-9391-28d038247578
+    // Too many dispatched events fill the Windows Message queue and this will raise an QUOTA_EXCEEDED error
+    if (!vacuumRunning) {
+      DispatchedHandler^ handler;
+      ChangeEvent event;
+      event.RowId = rowId;
+      event.TableName = ToPlatformString(tableName);
 
-    switch (action) {
-    case SQLITE_INSERT:
-      handler = ref new DispatchedHandler([this, event]() {
-        Insert(this, event);
-      });
-      break;
-    case SQLITE_UPDATE:
-      handler = ref new DispatchedHandler([this, event]() {
-        Update(this, event);
-      });
-      break;
-    case SQLITE_DELETE:
-      handler = ref new DispatchedHandler([this, event]() {
-        Delete(this, event);
-      });
-      break;
-    }
-    if (handler) {
-      dispatcher->RunAsync(CoreDispatcherPriority::Normal, handler);
+      switch (action) {
+      case SQLITE_INSERT:
+        handler = ref new DispatchedHandler([this, event]() {
+          Insert(this, event);
+        });
+        break;
+      case SQLITE_UPDATE:
+        handler = ref new DispatchedHandler([this, event]() {
+          Update(this, event);
+        });
+        break;
+      case SQLITE_DELETE:
+        handler = ref new DispatchedHandler([this, event]() {
+          Delete(this, event);
+        });
+        break;
+      }
+      if (handler) {
+        dispatcher->RunAsync(CoreDispatcherPriority::Normal, handler);
+      }
     }
   }
 
-  IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return RunAsync(sql, CopyParameters(params));
+  void Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return RunAsync(sql, params);
   }
 
-  IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+  void Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
     return RunAsync(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() -> void {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        statement->Run();
-      } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  void Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      statement->Run();
+    } catch (Platform::Exception^ e) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
-  IAsyncOperation<Platform::String^>^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return OneAsync(sql, CopyParameters(params));
+  Platform::String^ Database::OneAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return OneAsync(sql, params);
   }
 
-  IAsyncOperation<Platform::String^>^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+  Platform::String^ Database::OneAsyncMap(Platform::String^ sql, ParameterMap^ params) {
     return OneAsync(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncOperation<Platform::String^>^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() -> Platform::String^ {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        return statement->One();
-      } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  Platform::String^ Database::OneAsync(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->One();
+    } catch (Platform::Exception^ e) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
-  IAsyncOperation<Platform::String^>^ Database::AllAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+  Platform::String^ Database::AllAsyncMap(Platform::String^ sql, ParameterMap^ params) {
     return AllAsync(sql, params);
   }
 
-  IAsyncOperation<Platform::String^>^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return AllAsync(sql, CopyParameters(params));
+  Platform::String^ Database::AllAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+    return AllAsync(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncOperation<Platform::String^>^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
-    return Concurrency::create_async([this, sql, params]() -> Platform::String^ {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        return statement->All();
-      } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  Platform::String^ Database::AllAsync(Platform::String^ sql, ParameterContainer params) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      return statement->All();
+    } catch (Platform::Exception^ e) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
-  IAsyncAction^ Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
-    return EachAsync(sql, CopyParameters(params), callback);
+  void Database::EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback) {
+    return EachAsync(sql, params, callback);
   }
 
-  IAsyncAction^ Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
+  void Database::EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback) {
     return EachAsync(sql, params, callback);
   }
 
   template <typename ParameterContainer>
-  IAsyncAction^ Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
-    return Concurrency::create_async([this, sql, params, callback]() -> void {
-      try {
-        StatementPtr statement = PrepareAndBind(sql, params);
-        statement->Each(callback, dispatcher);
-      } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
-        throw;
-      }
-    });
+  void Database::EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback) {
+    try {
+      StatementPtr statement = PrepareAndBind(sql, params);
+      statement->Each(callback, dispatcher);
+    } catch (Platform::Exception^ e) {
+      lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+      throw;
+    }
   }
 
   bool Database::GetAutocommit() {
