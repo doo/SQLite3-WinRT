@@ -68,31 +68,41 @@ namespace SQLite3 {
     database->OnChange(action, dbName, tableName, rowId);
   }
 
-  void Database::OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
-    DispatchedHandler^ handler;
-    ChangeEvent event;
-    event.RowId = rowId;
-    event.TableName = ToPlatformString(tableName);
+  void Database::VacuumAsync() {
+    vacuumRunning = true;
+    RunAsync("VACUUM", reinterpret_cast<ParameterVector^>(nullptr));
+    vacuumRunning = false;
+  }
 
-    switch (action) {
-    case SQLITE_INSERT:
-      handler = ref new DispatchedHandler([this, event]() {
-        Insert(this, event);
-      });
-      break;
-    case SQLITE_UPDATE:
-      handler = ref new DispatchedHandler([this, event]() {
-        Update(this, event);
-      });
-      break;
-    case SQLITE_DELETE:
-      handler = ref new DispatchedHandler([this, event]() {
-        Delete(this, event);
-      });
-      break;
-    }
-    if (handler) {
-      dispatcher->RunAsync(CoreDispatcherPriority::Normal, handler);
+  void Database::OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
+    // See http://social.msdn.microsoft.com/Forums/en-US/winappswithcsharp/thread/d778c6e0-c248-4a1a-9391-28d038247578
+    // Too many dispatched events fill the Windows Message queue and this will raise an QUOTA_EXCEEDED error
+    if (!vacuumRunning) {
+      DispatchedHandler^ handler;
+      ChangeEvent event;
+      event.RowId = rowId;
+      event.TableName = ToPlatformString(tableName);
+
+      switch (action) {
+      case SQLITE_INSERT:
+        handler = ref new DispatchedHandler([this, event]() {
+          Insert(this, event);
+        });
+        break;
+      case SQLITE_UPDATE:
+        handler = ref new DispatchedHandler([this, event]() {
+          Update(this, event);
+        });
+        break;
+      case SQLITE_DELETE:
+        handler = ref new DispatchedHandler([this, event]() {
+          Delete(this, event);
+        });
+        break;
+      }
+      if (handler) {
+        dispatcher->RunAsync(CoreDispatcherPriority::Normal, handler);
+      }
     }
   }
 
