@@ -217,10 +217,17 @@
       WinJS.Utilities.createEventProperties('update', 'delete', 'insert')
     );
 
-    Object.defineProperty(that, "collationLanguage", {
-      set: function (value) { connection.collationLanguage = value; },
-      get: function () { return connection.collationLanguage; },
-      enumerable: true
+    Object.defineProperties(that, {
+      "collationLanguage": {
+        set: function (value) { connection.collationLanguage = value; },
+        get: function () { return connection.collationLanguage; },
+        enumerable: true
+      },
+      "fireEvents": {
+        set: function (value) { connection.fireEvents = value; },
+        get: function () { return connection.fireEvents; },
+        enumerable: true
+      }
     });
 
     return that;

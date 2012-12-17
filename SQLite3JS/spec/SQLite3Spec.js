@@ -317,6 +317,12 @@
     });
 
     describe('Events', function () {
+      beforeEach(function () {
+        db.fireEvents = true;
+      });
+      afterEach(function () {
+        db.fireEvents = false;
+      });
       function expectEvent(eventName, rowId, callback) {
         var calledEventHandler = false;
 

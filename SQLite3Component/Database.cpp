@@ -69,15 +69,16 @@ namespace SQLite3 {
   }
 
   void Database::VacuumAsync() {
-    vacuumRunning = true;
+    bool oldFireEvents = fireEvents;
+    fireEvents = false;
     RunAsync("VACUUM", reinterpret_cast<ParameterVector^>(nullptr));
-    vacuumRunning = false;
+    fireEvents = oldFireEvents;
   }
 
   void Database::OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
     // See http://social.msdn.microsoft.com/Forums/en-US/winappswithcsharp/thread/d778c6e0-c248-4a1a-9391-28d038247578
     // Too many dispatched events fill the Windows Message queue and this will raise an QUOTA_EXCEEDED error
-    if (!vacuumRunning) {
+    if (fireEvents) {
       DispatchedHandler^ handler;
       ChangeEvent event;
       event.RowId = rowId;
@@ -107,7 +108,7 @@ namespace SQLite3 {
   }
 
   void Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return RunAsync(sql, params);
+    RunAsync(sql, params);
   }
 
   void Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
