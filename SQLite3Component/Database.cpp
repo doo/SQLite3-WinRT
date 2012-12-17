@@ -29,6 +29,20 @@ namespace SQLite3 {
     return WinLocaleCollateUtf16(data, string1.length()*2, string1.c_str(), string2.length()*2, string2.c_str());
   }
 
+  static void TranslateFuncUtf16(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    int param0Type = sqlite3_value_type(argv[0]);
+    if (!(argc == 1 && param0Type == SQLITE_TEXT)) {
+      sqlite3_result_error(context, "Invalid parameters", -1);
+      return;
+    }
+    static auto resourceLoader = ref new Windows::ApplicationModel::Resources::ResourceLoader();    
+    auto p0Text = (wchar_t*)sqlite3_value_text16(argv[0]);
+    auto key = ref new Platform::String(p0Text);
+
+    auto translation = resourceLoader->GetString(key);
+    sqlite3_result_text16(context, translation->Data(), (translation->Length()+1)*sizeof(wchar_t), SQLITE_TRANSIENT);
+  }
+
   Database^ Database::Open(Platform::String^ dbPath) {
     sqlite3* sqlite;
     int ret = sqlite3_open16(dbPath->Data(), &sqlite);
@@ -57,6 +71,8 @@ namespace SQLite3 {
 
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, reinterpret_cast<void*>(this), WinLocaleCollateUtf16, nullptr);
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF8, reinterpret_cast<void*>(this), WinLocaleCollateUtf8, nullptr);
+
+      sqlite3_create_function_v2(sqlite, "APPTRANSLATE", 1, SQLITE_UTF16, NULL, TranslateFuncUtf16, nullptr, nullptr, nullptr);
   }
 
   Database::~Database() {
