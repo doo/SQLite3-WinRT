@@ -16,21 +16,20 @@ namespace SQLite3 {
     static Database^ Open(Platform::String^ dbPath);
     static void EnableSharedCache(bool enable);
 
-    Database() : fireEvents(false), sqlite(nullptr) {
-    }
+    Database() : fireEvents(false), sqlite(nullptr) {}
 
     virtual ~Database();
 
-    void RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    void RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
-    Platform::String^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    Platform::String^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
-    Platform::String^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    Platform::String^ AllAsyncMap(Platform::String^ sql, ParameterMap^ params);
-    void EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
-    void EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
+    Windows::Foundation::IAsyncAction^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    Windows::Foundation::IAsyncAction^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    Windows::Foundation::IAsyncOperation<Platform::String^>^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    Windows::Foundation::IAsyncOperation<Platform::String^>^ AllAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    Windows::Foundation::IAsyncAction^ EachAsyncVector(Platform::String^ sql, ParameterVector^ params, EachCallback^ callback);
+    Windows::Foundation::IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
-    void VacuumAsync();
+    Windows::Foundation::IAsyncAction^ VacuumAsync();
 
     bool GetAutocommit();
     long long GetLastInsertRowId();
@@ -65,13 +64,13 @@ namespace SQLite3 {
     StatementPtr PrepareAndBind(Platform::String^ sql, ParameterContainer params);
 
     template <typename ParameterContainer>
-    void RunAsync(Platform::String^ sql, ParameterContainer params);
+    Windows::Foundation::IAsyncAction^ RunAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    Platform::String^ OneAsync(Platform::String^ sql, ParameterContainer params);
+    Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    Platform::String^ AllAsync(Platform::String^ sql, ParameterContainer params);
+    Windows::Foundation::IAsyncOperation<Platform::String^>^ AllAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
-    void EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
+    Windows::Foundation::IAsyncAction^ EachAsync(Platform::String^ sql, ParameterContainer params, EachCallback^ callback);
 
     static void __cdecl UpdateHook(void* data, int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
     void OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);

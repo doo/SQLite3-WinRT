@@ -9,7 +9,7 @@ namespace SQLite3 {
     static StatementPtr Prepare(sqlite3* sqlite, Platform::String^ sql);
     ~Statement();
 
-    void Bind(ParameterVector^ params);
+    void Bind(const SafeParameterVector& params);
     void Bind(ParameterMap^ params);
 
     void Run();

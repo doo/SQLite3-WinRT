@@ -41,15 +41,17 @@
 
   PromiseQueue.prototype._handleNext = function () {
     var nextItem;
-
-    if (this._items.length > 0) {
-      this._busy = true;
-      nextItem = this._items[0];
-      this._items = this._items.slice(1);
-      this._handleItem(nextItem);
-    } else {
-      this._busy = false;
-    }
+    this._busy = true;
+    /* shorten call stack */
+    setImmediate(function () {
+      if (this._items.length > 0) {
+        nextItem = this._items[0];
+        this._items = this._items.slice(1);
+        this._handleItem(nextItem);
+      } else {
+        this._busy = false;
+      }
+    });
   };
 
   PromiseQueue.prototype._handleItem = function (queueItem) {
@@ -123,11 +125,9 @@
         ? funcName + "Map"
         : funcName + "Vector";
 
-      try {
-        return WinJS.Promise.wrap(connection[fullFuncName](sql, preparedArgs, callback));
-      } catch (error) {
+      return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
         return wrapException(error, that.getLastError());
-      }
+      });
     }
 
     that = {

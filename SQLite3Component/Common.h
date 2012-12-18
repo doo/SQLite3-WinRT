@@ -9,6 +9,8 @@ namespace SQLite3 {
   typedef std::unique_ptr<Statement> StatementPtr;
 
   typedef Windows::Foundation::Collections::IVectorView<Platform::Object^> ParameterVector;
+  typedef std::vector<Platform::Object^> SafeParameterVector;
+
   typedef Windows::Foundation::Collections::PropertySet ParameterMap;
 
   public delegate void EachCallback(Platform::String^);
