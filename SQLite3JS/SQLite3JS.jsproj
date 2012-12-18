@@ -44,8 +44,7 @@
     <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
     <TargetPlatformVersion>8.0</TargetPlatformVersion>
     <DefaultLanguage>en-US</DefaultLanguage>
-    <PackageCertificateKeyFile>SQLite3JS_TemporaryKey.pfx</PackageCertificateKeyFile>
-    <PackageCertificateThumbprint>74097B4D218EFB7BB78E01A5894E369B9210A584</PackageCertificateThumbprint>
+    <PackageCertificateThumbprint>475429737F7E7A58C42577C2EDDCBDF433C2B818</PackageCertificateThumbprint>
   </PropertyGroup>
   <ItemGroup>
     <AppxManifest Include="package.appxmanifest">
@@ -71,6 +70,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SQLite3Component\SQLite3Component.vcxproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PRIResource Include="strings\en-US\resources.resjson" />
+    <PRIResource Include="strings\en-US\secondary.resjson" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\$(WMSJSProjectDirectory)\Microsoft.VisualStudio.$(WMSJSProject).targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
