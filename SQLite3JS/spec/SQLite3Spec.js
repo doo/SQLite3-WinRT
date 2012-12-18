@@ -317,10 +317,17 @@
     });
 
     describe("Win8 app translation", function () {
-      it("should translate from database queries", function () {
+      it("should translate from database queries using default resource", function () {
         waitsForPromise(
           db.oneAsync("SELECT APPTRANSLATE(?) AS translation", ["testString1"]).then(function (row) {
             expect(row.translation).toEqual("Hello World!");
+          })
+        );
+      });
+      it("should translate from database queries using specific resource", function () {
+        waitsForPromise(
+          db.oneAsync("SELECT APPTRANSLATE(?,?) AS translation", ["secondary", "testString1"]).then(function (row) {
+            expect(row.translation).toEqual("Goodbye World.");
           })
         );
       });
