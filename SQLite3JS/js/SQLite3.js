@@ -40,18 +40,18 @@
   };
 
   PromiseQueue.prototype._handleNext = function () {
-    var nextItem;
-    this._busy = true;
+    var _this = this;
     /* shorten call stack */
-    setImmediate(function () {
-      if (this._items.length > 0) {
-        nextItem = this._items[0];
-        this._items = this._items.slice(1);
-        this._handleItem(nextItem);
-      } else {
-        this._busy = false;
-      }
-    });
+    if (this._items.length > 0) {
+      this._busy = true;
+      setImmediate(function () {
+        var nextItem = _this._items[0];
+        _this._items = _this._items.slice(1);
+        _this._handleItem(nextItem);
+      });
+    } else {
+      this._busy = false;
+    }
   };
 
   PromiseQueue.prototype._handleItem = function (queueItem) {
@@ -109,7 +109,7 @@
   }
 
   function wrapDatabase(connection) {
-    var that;
+    var that, queue = new PromiseQueue();
 
     function callNativeAsync(funcName, sql, args, callback) {
       var argString, preparedArgs, fullFuncName;
@@ -119,14 +119,16 @@
         SQLite3JS.log('Database#' + funcName + ': ' + sql + argString);
       }
 
-      preparedArgs = prepareArgs(args);
-      fullFuncName =
-        preparedArgs instanceof Windows.Foundation.Collections.PropertySet
-        ? funcName + "Map"
-        : funcName + "Vector";
+      return queue.append(function () {
+        preparedArgs = prepareArgs(args);
+        fullFuncName =
+          preparedArgs instanceof Windows.Foundation.Collections.PropertySet
+          ? funcName + "Map"
+          : funcName + "Vector";
 
-      return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
-        return wrapException(error, that.getLastError());
+        return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
+          return wrapException(error, that.getLastError());
+        });
       });
     }
 
