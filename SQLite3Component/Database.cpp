@@ -1,4 +1,5 @@
 #include <collection.h>
+#include <map>
 
 #include "Database.h"
 #include "Statement.h"
@@ -29,6 +30,37 @@ namespace SQLite3 {
     return WinLocaleCollateUtf16(data, string1.length()*2, string1.c_str(), string2.length()*2, string2.c_str());
   }
 
+  static std::map<Platform::String^, Windows::ApplicationModel::Resources::ResourceLoader^> resourceLoaders;
+  static void TranslateUtf16(sqlite3_context *context, int argc, sqlite3_value **argv) {
+    int param0Type = sqlite3_value_type(argv[0]);
+    int param1Type = argc == 2 ? sqlite3_value_type(argv[1]) : -1;
+    if (param0Type != SQLITE_TEXT || (argc == 2 && param1Type != SQLITE_TEXT)) {
+      sqlite3_result_error(context, "Invalid parameters", -1);
+      return;
+    }
+    Windows::ApplicationModel::Resources::ResourceLoader^ resourceLoader;
+    const wchar_t* key;
+    if (argc == 1) {
+      static auto defaultResourceLoader = ref new Windows::ApplicationModel::Resources::ResourceLoader();
+      resourceLoader = defaultResourceLoader;
+
+      key = (wchar_t*)sqlite3_value_text16(argv[0]);
+    } else {
+      auto resourceMapName = ref new Platform::String((wchar_t*)sqlite3_value_text16(argv[0]));
+      resourceLoader = resourceLoaders[resourceMapName];
+      if (!resourceLoader) {
+        resourceLoader = ref new Windows::ApplicationModel::Resources::ResourceLoader(resourceMapName);
+        resourceLoaders[resourceMapName] = resourceLoader;
+      }
+
+      key = (wchar_t*)sqlite3_value_text16(argv[1]);
+    }
+    
+    auto platformKey = ref new Platform::String(key);
+    auto translation = resourceLoader->GetString(platformKey);
+    sqlite3_result_text16(context, translation->Data(), (translation->Length()+1)*sizeof(wchar_t), SQLITE_TRANSIENT);
+  }
+
   Database^ Database::Open(Platform::String^ dbPath) {
     sqlite3* sqlite;
     int ret = sqlite3_open16(dbPath->Data(), &sqlite);
@@ -57,6 +89,9 @@ namespace SQLite3 {
 
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, reinterpret_cast<void*>(this), WinLocaleCollateUtf16, nullptr);
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF8, reinterpret_cast<void*>(this), WinLocaleCollateUtf8, nullptr);
+
+      sqlite3_create_function_v2(sqlite, "APPTRANSLATE", 1, SQLITE_UTF16, NULL, TranslateUtf16, nullptr, nullptr, nullptr);
+      sqlite3_create_function_v2(sqlite, "APPTRANSLATE", 2, SQLITE_UTF16, NULL, TranslateUtf16, nullptr, nullptr, nullptr);
   }
 
   Database::~Database() {
@@ -69,15 +104,16 @@ namespace SQLite3 {
   }
 
   void Database::VacuumAsync() {
-    vacuumRunning = true;
+    bool oldFireEvents = fireEvents;
+    fireEvents = false;
     RunAsync("VACUUM", reinterpret_cast<ParameterVector^>(nullptr));
-    vacuumRunning = false;
+    fireEvents = oldFireEvents;
   }
 
   void Database::OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
     // See http://social.msdn.microsoft.com/Forums/en-US/winappswithcsharp/thread/d778c6e0-c248-4a1a-9391-28d038247578
     // Too many dispatched events fill the Windows Message queue and this will raise an QUOTA_EXCEEDED error
-    if (!vacuumRunning) {
+    if (fireEvents) {
       DispatchedHandler^ handler;
       ChangeEvent event;
       event.RowId = rowId;
@@ -107,7 +143,7 @@ namespace SQLite3 {
   }
 
   void Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
-    return RunAsync(sql, params);
+    RunAsync(sql, params);
   }
 
   void Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {

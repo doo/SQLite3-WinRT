@@ -16,7 +16,7 @@ namespace SQLite3 {
     static Database^ Open(Platform::String^ dbPath);
     static void EnableSharedCache(bool enable);
 
-    Database() : vacuumRunning(false), sqlite(nullptr) {
+    Database() : fireEvents(false), sqlite(nullptr) {
     }
 
     virtual ~Database();
@@ -49,6 +49,15 @@ namespace SQLite3 {
       }
     }
 
+    property bool FireEvents {
+      bool get() {
+        return fireEvents;
+      };
+      void set(bool value) {
+        fireEvents = value;
+      };
+    }
+
   private:
     Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^ dispatcher);
 
@@ -67,7 +76,7 @@ namespace SQLite3 {
     static void __cdecl UpdateHook(void* data, int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
     void OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId);
 
-    bool vacuumRunning;
+    bool fireEvents;
     Platform::String^ collationLanguage;
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
