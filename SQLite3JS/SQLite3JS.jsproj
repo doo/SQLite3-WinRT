@@ -44,8 +44,7 @@
     <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
     <TargetPlatformVersion>8.0</TargetPlatformVersion>
     <DefaultLanguage>en-US</DefaultLanguage>
-    <PackageCertificateKeyFile>SQLite3JS_TemporaryKey.pfx</PackageCertificateKeyFile>
-    <PackageCertificateThumbprint>74097B4D218EFB7BB78E01A5894E369B9210A584</PackageCertificateThumbprint>
+    <PackageCertificateThumbprint>475429737F7E7A58C42577C2EDDCBDF433C2B818</PackageCertificateThumbprint>
   </PropertyGroup>
   <ItemGroup>
     <AppxManifest Include="package.appxmanifest">
