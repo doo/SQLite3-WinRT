@@ -42,16 +42,16 @@
   PromiseQueue.prototype._handleNext = function () {
     var _this = this;
     /* shorten call stack */
-    if (this._items.length > 0) {
-      this._busy = true;
-      setImmediate(function () {
+    this._busy = true;
+    setImmediate(function () {
+      if (_this._items.length > 0) {
         var nextItem = _this._items[0];
         _this._items = _this._items.slice(1);
         _this._handleItem(nextItem);
-      });
-    } else {
-      this._busy = false;
-    }
+      } else {
+        _this._busy = false;;
+      }
+    });
   };
 
   PromiseQueue.prototype._handleItem = function (queueItem) {
