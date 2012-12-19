@@ -60,11 +60,11 @@
     if (!queueItem.cancelled) {
       queueItem.promise = queueItem.createPromise();
       queueItem.promise.done(function (result) {
+        _this._handleNext();
         queueItem.complete(result);
-        _this._handleNext();
       }, function (error) {
-        queueItem.error(error);
         _this._handleNext();
+        queueItem.error(error);
       });
     } else {
       this._handleNext();
