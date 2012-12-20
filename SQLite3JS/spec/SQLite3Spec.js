@@ -180,8 +180,8 @@
         );
       });
 
-      it('should allow cancellation', function () {
-        var promise, thisSpec = this;
+    xit('should allow cancellation', function () {
+      var promise, thisSpec = this;
 
         promise = db.allAsync('SELECT * FROM Item ORDER BY id').then(function () {
           thisSpec.fail('Promise did not fail as expected.');
@@ -231,8 +231,8 @@
         );
       });
 
-      it('should allow cancellation in the callback', function () {
-        var promise, thisSpec = this;
+    xit('should allow cancellation in the callback', function () {
+      var promise, thisSpec = this;
 
         function cancel(row) {
           promise.cancel();
@@ -316,7 +316,30 @@
       });
     });
 
+    describe("Win8 app translation", function () {
+      it("should translate from database queries using default resource", function () {
+        waitsForPromise(
+          db.oneAsync("SELECT APPTRANSLATE(?) AS translation", ["testString1"]).then(function (row) {
+            expect(row.translation).toEqual("Hello World!");
+          })
+        );
+      });
+      it("should translate from database queries using specific resource", function () {
+        waitsForPromise(
+          db.oneAsync("SELECT APPTRANSLATE(?,?) AS translation", ["secondary", "testString1"]).then(function (row) {
+            expect(row.translation).toEqual("Goodbye World.");
+          })
+        );
+      });
+    });
+
     describe('Events', function () {
+      beforeEach(function () {
+        db.fireEvents = true;
+      });
+      afterEach(function () {
+        db.fireEvents = false;
+      });
       function expectEvent(eventName, rowId, callback) {
         var calledEventHandler = false;
 
@@ -499,7 +522,8 @@
               predef: [
                 'SQLite3', 'WinJS', 'Windows', 'console', 'document', 'setImmediate',
                 'SQLite3JS', 'JSLINT',
-                'jasmine', 'describe', 'it', 'expect', 'runs', 'waitsFor', 'beforeEach', 'afterEach'
+                'jasmine', 'describe', 'xdescribe', 'it', 'xit', 'beforeEach', 'afterEach',
+                'expect', 'runs', 'waitsFor'
               ]
             };
 

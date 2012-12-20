@@ -40,16 +40,18 @@
   };
 
   PromiseQueue.prototype._handleNext = function () {
-    var nextItem;
-
-    if (this._items.length > 0) {
-      this._busy = true;
-      nextItem = this._items[0];
-      this._items = this._items.slice(1);
-      this._handleItem(nextItem);
-    } else {
-      this._busy = false;
-    }
+    var _this = this;
+    /* shorten call stack */
+    this._busy = true;
+    setImmediate(function () {
+      if (_this._items.length > 0) {
+        var nextItem = _this._items[0];
+        _this._items = _this._items.slice(1);
+        _this._handleItem(nextItem);
+      } else {
+        _this._busy = false;;
+      }
+    });
   };
 
   PromiseQueue.prototype._handleItem = function (queueItem) {
@@ -58,11 +60,11 @@
     if (!queueItem.cancelled) {
       queueItem.promise = queueItem.createPromise();
       queueItem.promise.done(function (result) {
+        _this._handleNext();
         queueItem.complete(result);
-        _this._handleNext();
       }, function (error) {
-        queueItem.error(error);
         _this._handleNext();
+        queueItem.error(error);
       });
     } else {
       this._handleNext();
@@ -110,39 +112,41 @@
     var that, queue = new PromiseQueue();
 
     function callNativeAsync(funcName, sql, args, callback) {
+      var argString, preparedArgs, fullFuncName;
+
       if (SQLite3JS.debug) {
-        var argString = args ? ' ' + args.toString() : '';
+        argString = args ? ' ' + args.toString() : '';
         SQLite3JS.log('Database#' + funcName + ': ' + sql + argString);
       }
 
       return queue.append(function () {
-        var preparedArgs = prepareArgs(args);
-        if (preparedArgs instanceof Windows.Foundation.Collections.PropertySet) {
-          return connection[funcName + "Map"](sql, preparedArgs, callback);
-        }
-        return connection[funcName + "Vector"](sql, preparedArgs, callback);
-      });
-    }
+        preparedArgs = prepareArgs(args);
+        fullFuncName =
+          preparedArgs instanceof Windows.Foundation.Collections.PropertySet
+          ? funcName + "Map"
+          : funcName + "Vector";
 
-    function wrapExceptionWithLastError(exception) {
-      return wrapException(exception, that.getLastError());
+        return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
+          return wrapException(error, that.getLastError());
+        });
+      });
     }
 
     that = {
       runAsync: function (sql, args) {
         return callNativeAsync('runAsync', sql, args).then(function () {
           return that;
-        }, wrapExceptionWithLastError);
+        });
       },
       oneAsync: function (sql, args) {
         return callNativeAsync('oneAsync', sql, args).then(function (row) {
           return row ? JSON.parse(row) : null;
-        }, wrapExceptionWithLastError);
+        });
       },
       allAsync: function (sql, args) {
         return callNativeAsync('allAsync', sql, args).then(function (rows) {
           return rows ? JSON.parse(rows) : null;
-        }, wrapExceptionWithLastError);
+        });
       },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -154,7 +158,7 @@
           callback(JSON.parse(row));
         }).then(function () {
           return that;
-        }, wrapExceptionWithLastError);
+        });
       },
       mapAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
@@ -200,6 +204,12 @@
       close: function () {
         connection.close();
       },
+      vacuumAsync: function () {
+        return new WinJS.Promise( function(complete) {
+          connection.vacuumAsync();
+          complete();
+        });
+      },
       addEventListener: connection.addEventListener.bind(connection),
       removeEventListener: connection.removeEventListener.bind(connection)
     };
@@ -209,10 +219,17 @@
       WinJS.Utilities.createEventProperties('update', 'delete', 'insert')
     );
 
-    Object.defineProperty(that, "collationLanguage", {
-      set: function (value) { connection.collationLanguage = value; },
-      get: function () { return connection.collationLanguage; },
-      enumerable: true
+    Object.defineProperties(that, {
+      "collationLanguage": {
+        set: function (value) { connection.collationLanguage = value; },
+        get: function () { return connection.collationLanguage; },
+        enumerable: true
+      },
+      "fireEvents": {
+        set: function (value) { connection.fireEvents = value; },
+        get: function () { return connection.fireEvents; },
+        enumerable: true
+      }
     });
 
     return that;
@@ -348,9 +365,12 @@
   );
 
   SQLite3JS.openAsync = function (dbPath) {
-    return SQLite3.Database.openAsync(dbPath).then(function (connection) {
-      return wrapDatabase(connection);
-    }, wrapException);
+    try {
+      var db = wrapDatabase(SQLite3.Database.open(dbPath));
+      return WinJS.Promise.wrap(db);
+    } catch (error) {
+      return wrapException(error);
+    }
   };
 
   return SQLite3JS;
