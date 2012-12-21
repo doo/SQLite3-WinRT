@@ -1,8 +1,11 @@
 #include <assert.h>
 #include <collection.h>
-#include <ppltasks.h>
 #include <sstream>
 #include <iomanip>
+
+#include <ppl.h>
+#include <ppltasks.h>
+
 #include "Statement.h"
 #include "Database.h"
 
@@ -34,6 +37,10 @@ namespace SQLite3 {
   }
 
   void Statement::Bind(ParameterMap^ params) {
+    if (!params) {
+      return;
+    }
+
     for (int i = 0; i < BindParameterCount(); ++i) {
       int index = i + 1;
       auto nameWithoutPrefix = BindParameterName(index).substr(1);
@@ -145,14 +152,13 @@ namespace SQLite3 {
       std::wostringstream output;
       GetRow(output);
       auto row = ref new Platform::String(output.str().c_str());
-      auto callbackTask = concurrency::task<void>(
+      auto callbackTask = Concurrency::task<void>(
         dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, 
-          ref new Windows::UI::Core::DispatchedHandler([row, callback]() {
-            callback(row);
-          })
-        )
+        ref new Windows::UI::Core::DispatchedHandler([row, callback]() {
+          callback(row);
+        }))
       );
-      callbackTask.get();
+      callbackTask.get();    
     }
   }
 
