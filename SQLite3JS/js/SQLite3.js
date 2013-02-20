@@ -49,7 +49,7 @@
         _this._items = _this._items.slice(1);
         _this._handleItem(nextItem);
       } else {
-        _this._busy = false;;
+        _this._busy = false;
       }
     });
   };
