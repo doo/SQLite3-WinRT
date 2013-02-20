@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
-  <Identity Name="SQLite3JS" Version="1.0.0.0" Publisher="CN=doo GmbH, OU=Digital ID Class 3 - Microsoft Software Validation v2, O=doo GmbH, L=Bonn, S=Nordrhein Westfalen, C=DE" />
+  <Identity Name="SQLite3JS" Version="1.0.0.0" Publisher="CN=doo Windows 8 team" />
   <Properties>
     <DisplayName>SQLite3JS</DisplayName>
     <Description>SQLite3JS</Description>
