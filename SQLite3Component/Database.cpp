@@ -21,8 +21,8 @@ namespace SQLite3 {
     Platform::String^ language = db->CollationLanguage;
     int compareResult = CompareStringEx(language ? language->Data() : LOCALE_NAME_USER_DEFAULT, 
                                         LINGUISTIC_IGNORECASE|LINGUISTIC_IGNOREDIACRITIC|SORT_DIGITSASNUMBERS, 
-                                        (LPCWCH)str1Data, str1Length/2, 
-                                        (LPCWCH)str2Data, str2Length/2, 
+                                        (LPCWCH)str1Data, str1Length/sizeof(wchar_t), 
+                                        (LPCWCH)str2Data, str2Length/sizeof(wchar_t), 
                                         NULL, NULL, 0);
     if (compareResult == 0) {
       throw ref new Platform::InvalidArgumentException();
@@ -33,7 +33,9 @@ namespace SQLite3 {
   static int WinLocaleCollateUtf8(void* data, int str1Length, const void* str1Data, int str2Length, const void* str2Data) {
     std::wstring string1 = ToWString((const char*)str1Data, str1Length);
     std::wstring string2 = ToWString((const char*)str2Data, str2Length);
-    return WinLocaleCollateUtf16(data, string1.length()*2, string1.c_str(), string2.length()*2, string2.c_str());
+    // SQLite expects unsigned int argument but length returns size_t (unsigned machine word). I think its safe to cast this warning away here
+    // since "no one ever needs strings bigger than 2 GB in size". If they do, they have to fix the signature and internals of SQLite themself.
+    return WinLocaleCollateUtf16(data, (int)(string1.length()*sizeof(wchar_t)), string1.c_str(), (int)(string2.length()*sizeof(wchar_t)), string2.c_str());
   }
 
   static SafeParameterVector CopyParameters(ParameterVector^ params) {
