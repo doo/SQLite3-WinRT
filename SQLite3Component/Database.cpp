@@ -20,7 +20,7 @@ namespace SQLite3 {
     Database^ db = reinterpret_cast<Database^>(data);
     Platform::String^ language = db->CollationLanguage;
     int compareResult = CompareStringEx(language ? language->Data() : LOCALE_NAME_USER_DEFAULT, 
-                                        LINGUISTIC_IGNORECASE|LINGUISTIC_IGNOREDIACRITIC, 
+                                        LINGUISTIC_IGNORECASE|LINGUISTIC_IGNOREDIACRITIC|SORT_DIGITSASNUMBERS, 
                                         (LPCWCH)str1Data, str1Length/2, 
                                         (LPCWCH)str2Data, str2Length/2, 
                                         NULL, NULL, 0);
