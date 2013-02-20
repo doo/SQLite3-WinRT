@@ -3,6 +3,7 @@
 
 #include <collection.h>
 #include <map>
+#include <regex>
 
 #include "Database.h"
 #include "Statement.h"
@@ -34,6 +35,13 @@ namespace SQLite3 {
     std::wstring string1 = ToWString((const char*)str1Data, str1Length);
     std::wstring string2 = ToWString((const char*)str2Data, str2Length);
     return WinLocaleCollateUtf16(data, string1.length()*2, string1.c_str(), string2.length()*2, string2.c_str());
+  }
+
+  static void SqliteRegexUtf16( sqlite3_context *context, int argc, sqlite3_value **argv ) {
+    const wchar_t* patternText = (const wchar_t*) sqlite3_value_text16(argv[0]);
+    std::wstring searchText((const wchar_t*) sqlite3_value_text16(argv[1]));
+    std::wregex regex(patternText);
+    sqlite3_result_int(context, std::regex_search(searchText.begin(), searchText.end(), regex) ? 1 : 0);
   }
 
   static SafeParameterVector CopyParameters(ParameterVector^ params) {
@@ -108,6 +116,8 @@ namespace SQLite3 {
 
       sqlite3_create_function_v2(sqlite, "APPTRANSLATE", 1, SQLITE_UTF16, NULL, TranslateUtf16, nullptr, nullptr, nullptr);
       sqlite3_create_function_v2(sqlite, "APPTRANSLATE", 2, SQLITE_UTF16, NULL, TranslateUtf16, nullptr, nullptr, nullptr);
+
+      sqlite3_create_function_v2(sqlite, "REGEXP", 2, SQLITE_UTF16, NULL, SqliteRegexUtf16, nullptr, nullptr, nullptr);
   }
 
   Database::~Database() {
