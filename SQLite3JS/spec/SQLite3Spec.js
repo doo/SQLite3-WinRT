@@ -274,6 +274,37 @@
       });
     });
 
+    describe("Sorting", function () {
+      beforeEach(function () {
+        waitsForPromise(
+          db.runAsync("CREATE TABLE SortTest (name TEXT COLLATE WINLOCALE)").then(function () {
+            return db.runAsync("INSERT INTO SortTest VALUES (?)", ["Foo20"]);
+          }).then(function () {
+            return db.runAsync("INSERT INTO SortTest VALUES (?)", ["Foo"]);
+          }).then(function () {
+            return db.runAsync("INSERT INTO SortTest VALUES (?)", ["Foo3"]);
+          })
+        );
+      });
+
+      afterEach(function () {
+        waitsForPromise(
+          db.runAsync("DROP TABLE SortTest")
+        );
+      });
+
+      it("should order numbers according to value", function () {
+        waitsForPromise(
+          db.allAsync("SELECT * FROM SortTest ORDER BY name").then(function (rows) {
+            expect(rows[0].name).toEqual("Foo");
+            expect(rows[1].name).toEqual("Foo3");
+            expect(rows[2].name).toEqual("Foo20");
+          })
+        );
+      });
+
+
+    });
     describe("Locale-specific Collation", function () {
       beforeEach(function () {
         waitsForPromise(
