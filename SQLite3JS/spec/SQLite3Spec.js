@@ -347,6 +347,14 @@
       });
     });
 
+    it("should support the REGEXP operator", function () {
+      waitsForPromise(
+        db.allAsync("SELECT * FROM Item WHERE name REGEXP '.*a'").then(function (rows) {
+          expect(rows.length).toEqual(2);
+        })
+      );
+    });
+
     describe("Win8 app translation", function () {
       it("should translate from database queries using default resource", function () {
         waitsForPromise(
