@@ -62,8 +62,11 @@
     <Content Include="lib\jasmine-1.1.0\jasmine.css" />
     <Content Include="lib\jasmine-1.1.0\jasmine.js" />
     <Content Include="lib\jasmine-1.1.0\MIT.LICENSE" />
+    <Content Include="lib\jasmine-reporters\jasmine.junit_reporter.js" />
     <Content Include="lib\jslint\jslint.js" />
+    <Content Include="spec\jasmineRunner.js" />
     <Content Include="spec\SQLite3Spec.js" />
+    <Content Include="spec\testConfig.json" />
     <None Include="SQLite3JS_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
