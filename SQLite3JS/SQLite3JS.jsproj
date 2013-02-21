@@ -66,9 +66,7 @@
     <Content Include="lib\jslint\jslint.js" />
     <Content Include="spec\jasmineRunner.js" />
     <Content Include="spec\SQLite3Spec.js" />
-    <Content Include="spec\config.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
+    <Content Include="spec\config.json" />
     <None Include="SQLite3JS_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
