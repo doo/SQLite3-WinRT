@@ -20,8 +20,8 @@ namespace SQLite3 {
 
     virtual ~Database();
 
-    Windows::Foundation::IAsyncAction^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    Windows::Foundation::IAsyncAction^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    Windows::Foundation::IAsyncOperation<int>^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    Windows::Foundation::IAsyncOperation<int>^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
     Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
     Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
     Windows::Foundation::IAsyncOperation<Platform::String^>^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
@@ -64,7 +64,7 @@ namespace SQLite3 {
     StatementPtr PrepareAndBind(Platform::String^ sql, ParameterContainer params);
 
     template <typename ParameterContainer>
-    Windows::Foundation::IAsyncAction^ RunAsync(Platform::String^ sql, ParameterContainer params);
+    Windows::Foundation::IAsyncOperation<int>^ RunAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
     Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>

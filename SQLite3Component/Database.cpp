@@ -135,7 +135,7 @@ namespace SQLite3 {
     return Concurrency::create_async([this]() {
       bool oldFireEvents = fireEvents;
       fireEvents = false;
-      Concurrency::task<void>(RunAsync("VACUUM", reinterpret_cast<ParameterMap^>(nullptr))).get();
+      Concurrency::task<int>(RunAsync("VACUUM", reinterpret_cast<ParameterMap^>(nullptr))).get();
       fireEvents = oldFireEvents;
     });
   }
@@ -172,20 +172,21 @@ namespace SQLite3 {
     }
   }
 
-  IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+  IAsyncOperation<int>^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
     return RunAsync(sql, CopyParameters(params));
   }
 
-  IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+  IAsyncOperation<int>^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
     return RunAsync(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
+  IAsyncOperation<int>^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
     return Concurrency::create_async([this, sql, params] {
       try {
         StatementPtr statement = PrepareAndBind(sql, params);
         statement->Run();
+        return sqlite3_changes(sqlite);
       } catch (Platform::Exception^ e) {
         lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
         throw;

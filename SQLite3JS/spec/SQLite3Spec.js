@@ -58,17 +58,6 @@
     });
 
     describe('runAsync()', function () {
-      it('should allow chaining', function () {
-        waitsForPromise(
-          db.runAsync('DELETE FROM Item WHERE id = 1')
-          .then(function (chainedDb) {
-            return chainedDb.oneAsync('SELECT COUNT(*) AS count FROM Item');
-          }).then(function (row) {
-            expect(row.count).toEqual(2);
-          })
-        );
-      });
-
       it('should allow binding null arguments', function () {
         var name = 'Mango';
 
@@ -110,6 +99,15 @@
               { limit: 5 });
           }).then(function (row) {
             expect(row.cnt).toEqual(1);
+          })
+        );
+      });
+
+      it('should return the number of affected rows', function () {
+        waitsForPromise(
+          db.runAsync('DELETE FROM Item')
+          .then(function (affectedRows) {
+            expect(affectedRows).toEqual(3);
           })
         );
       });
@@ -423,20 +421,23 @@
     describe('Concurrency Handling', function () {
       it('should support two concurrent connections', function () {
         var tempFolder = Windows.Storage.ApplicationData.current.temporaryFolder,
-            dbFilename = tempFolder.path + "\\concurrencyTest.sqlite";
+            dbFilename = tempFolder.path + "\\concurrencyTest.sqlite",
+            db1 = null, db2 = null;
 
         SQLite3.Database.enableSharedCache(true);
 
         waitsForPromise(
           SQLite3JS.openAsync(dbFilename)
-          .then(function (db1) {
+          .then(function (newDb) {
+            db1 = newDb;
             return db1.runAsync(
               "CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY, value TEXT)");
-          }).then(function (db1) {
+          }).then(function () {
             return db1.runAsync("DELETE FROM TestData");
-          }).then(function (db1) {
+          }).then(function () {
             return SQLite3JS.openAsync(dbFilename)
-            .then(function (db2) {
+            .then(function (newDb) {
+              db2 = newDb;
               var i, db, promise, promises = [];
               for (i = 0; i < 50; i += 1) {
                 db = i % 2 ? db1 : db2;
