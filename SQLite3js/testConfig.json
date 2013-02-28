@@ -1,0 +1,6 @@
+{
+  "suitesToRun": [],
+  "quitAfterTests": false,
+  "xmlOutput": false,
+  "jslintPredefines": ["waitsFor", "SQLite3JS", "SQLite3"]
+}

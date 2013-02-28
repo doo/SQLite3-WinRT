@@ -17,11 +17,15 @@
     <!-- JSLint -->
     <script src="/lib/jslint/jslint.js"></script>
 
-    <!-- SQLite3JS -->
+    <!-- MonkeyPatches(tm) -->
+    <script src="/js/tests/string.monkeypatch.js"></script>
+
+    <!-- Specs Runner -->
+    <script src="/js/tests/jasmineRunner.js"></script>
+
     <script src="/js/SQLite3.js"></script>
-    <script src="/spec/SQLite3Spec.js"></script>
-    <script src="/spec/jasmineRunner.js"></script>
 </head>
 <body>
+  <div id="jslint_errors"></div>
 </body>
 </html>
