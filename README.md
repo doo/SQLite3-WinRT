@@ -6,8 +6,8 @@ Async SQLite for (JavaScript) Windows Store apps.
 
 This version introduces a **breaking API change** along with some enhancements:
 
- 1. `runAsync` no longer returns the database for chained calls. Instead it will return the number of rows affected by the previous command.
- 2. A special collation sequence, `WINLOCALE` is introduced. It uses the sorting behaviour of the currently active system locale. The locale can be overriden by setting `db.collationLanguage`.
+ 1. `runAsync` no longer returns the database for chained calls. Instead it will now return the number of rows affected by the executed SQL statement.
+ 2. A special collation sequence, `WINLOCALE` is introduced. It uses the sorting behaviour of the currently active system locale. The locale can be overridden by setting `db.collationLanguage`.
  3. We also now implemented a `regexp` function based on the STL (TR1) regex functionality. You can now use the `REGEXP` operator, see the SQLite documentation for further information.
 
 As usual, you should look at our unit tests if you are unsure how to use this new functionality.
