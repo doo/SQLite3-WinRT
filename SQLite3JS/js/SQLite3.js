@@ -134,8 +134,8 @@
 
     that = {
       runAsync: function (sql, args) {
-        return callNativeAsync('runAsync', sql, args).then(function () {
-          return that;
+        return callNativeAsync('runAsync', sql, args).then(function (affectedRowCount) {
+          return affectedRowCount;
         });
       },
       oneAsync: function (sql, args) {

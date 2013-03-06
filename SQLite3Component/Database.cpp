@@ -4,6 +4,7 @@
 #include <collection.h>
 #include <map>
 #include <regex>
+#include <assert.h>
 
 #include "Database.h"
 #include "Statement.h"
@@ -110,9 +111,12 @@ namespace SQLite3 {
   Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
     : collationLanguage(nullptr) // will use user locale
     , dispatcher(dispatcher)
+    , changeHandlers(0)
+    , insertChangeHandlers(0)
+    , updateChangeHandlers(0)
+    , deleteChangeHandlers(0)
     , sqlite(sqlite) {
-      sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
-
+      assert(sqlite);
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, reinterpret_cast<void*>(this), WinLocaleCollateUtf16, nullptr);
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF8, reinterpret_cast<void*>(this), WinLocaleCollateUtf8, nullptr);
 
@@ -126,7 +130,26 @@ namespace SQLite3 {
     sqlite3_close(sqlite);
   }
 
+  void Database::addChangeHandler(int& handlerCount) {
+    assert(changeHandlers >= 0);
+    assert(handlerCount >= 0);
+    ++handlerCount;
+    if (changeHandlers++ == 0) {
+      sqlite3_update_hook(sqlite, UpdateHook, reinterpret_cast<void*>(this));
+    }
+  }
+
+  void Database::removeChangeHandler(int& handlerCount) {
+    assert(changeHandlers > 0);
+    assert(handlerCount > 0);
+    --handlerCount;
+    if (--changeHandlers == 0) {
+      sqlite3_update_hook(sqlite, nullptr, nullptr);
+    }
+  }
+
   void Database::UpdateHook(void* data, int action, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
+    assert(data);
     Database^ database = reinterpret_cast<Database^>(data);
     database->OnChange(action, dbName, tableName, rowId);
   }
@@ -135,35 +158,47 @@ namespace SQLite3 {
     return Concurrency::create_async([this]() {
       bool oldFireEvents = fireEvents;
       fireEvents = false;
-      Concurrency::task<void>(RunAsync("VACUUM", reinterpret_cast<ParameterMap^>(nullptr))).get();
+      // See http://social.msdn.microsoft.com/Forums/en-US/winappswithcsharp/thread/d778c6e0-c248-4a1a-9391-28d038247578
+      // Too many dispatched events fill the Windows Message queue and this will raise an QUOTA_EXCEEDED error
+      Concurrency::task<int>(RunAsync("VACUUM", reinterpret_cast<ParameterMap^>(nullptr))).get();
       fireEvents = oldFireEvents;
     });
   }
 
   void Database::OnChange(int action, char const* dbName, char const* tableName, sqlite3_int64 rowId) {
-    // See http://social.msdn.microsoft.com/Forums/en-US/winappswithcsharp/thread/d778c6e0-c248-4a1a-9391-28d038247578
-    // Too many dispatched events fill the Windows Message queue and this will raise an QUOTA_EXCEEDED error
     if (fireEvents) {
       DispatchedHandler^ handler;
-      ChangeEvent event;
-      event.RowId = rowId;
-      event.TableName = ToPlatformString(tableName);
-
+      
       switch (action) {
       case SQLITE_INSERT:
-        handler = ref new DispatchedHandler([this, event]() {
-          Insert(this, event);
-        });
+        if (insertChangeHandlers) {
+          ChangeEvent event;
+          event.RowId = rowId;
+          event.TableName = ToPlatformString(tableName);        
+          handler = ref new DispatchedHandler([this, event]() {
+            _Insert(this, event);
+          });
+        }
         break;
       case SQLITE_UPDATE:
-        handler = ref new DispatchedHandler([this, event]() {
-          Update(this, event);
-        });
+        if (updateChangeHandlers) {
+          ChangeEvent event;
+          event.RowId = rowId;
+          event.TableName = ToPlatformString(tableName);        
+          handler = ref new DispatchedHandler([this, event]() {
+            _Update(this, event);
+          });
+        }
         break;
       case SQLITE_DELETE:
-        handler = ref new DispatchedHandler([this, event]() {
-          Delete(this, event);
-        });
+        if (deleteChangeHandlers) {
+          ChangeEvent event;
+          event.RowId = rowId;
+          event.TableName = ToPlatformString(tableName);        
+          handler = ref new DispatchedHandler([this, event]() {
+            _Delete(this, event);
+          });
+        }
         break;
       }
       if (handler) {
@@ -172,20 +207,21 @@ namespace SQLite3 {
     }
   }
 
-  IAsyncAction^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
+  IAsyncOperation<int>^ Database::RunAsyncVector(Platform::String^ sql, ParameterVector^ params) {
     return RunAsync(sql, CopyParameters(params));
   }
 
-  IAsyncAction^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
+  IAsyncOperation<int>^ Database::RunAsyncMap(Platform::String^ sql, ParameterMap^ params) {
     return RunAsync(sql, params);
   }
 
   template <typename ParameterContainer>
-  IAsyncAction^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
+  IAsyncOperation<int>^ Database::RunAsync(Platform::String^ sql, ParameterContainer params) {
     return Concurrency::create_async([this, sql, params] {
       try {
         StatementPtr statement = PrepareAndBind(sql, params);
         statement->Run();
+        return sqlite3_changes(sqlite);
       } catch (Platform::Exception^ e) {
         lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
         throw;
