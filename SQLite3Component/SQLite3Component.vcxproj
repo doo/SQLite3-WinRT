@@ -40,7 +40,6 @@
     <ClInclude Include="Constants.h" />
     <ClInclude Include="Database.h" />
     <ClInclude Include="res\component_manifest.h" />
-    <ClInclude Include="res\product_version.h" />
     <ClInclude Include="sqlite3.h" />
     <ClInclude Include="Statement.h" />
   </ItemGroup>

@@ -1,3 +1,12 @@
 #define COMPONENT_NAME "SQLite3"
 #define COMPONENT_DESCRIPTION "SQLite3 WinRT Component"
-#define COMPONENT_VERSION_BUILD 9
+
+#define COMPONENT_VERSION_MAJOR 1
+#define COMPONENT_VERSION_MINOR 1
+#define COMPONENT_VERSION_BUILD 0
+
+#define _VERSION_STR(a,b,c,d)   #a "." #b "." #c "." #d
+#define VERSION_STR(a,b,c,d)    _VERSION_STR(a,b,c,d)
+
+#define COMPONENT_COMPANY_NAME "doo GmbH"
+#define COMPONENT_COPYRIGHT "(c)2012 " COMPONENT_COMPANY_NAME

@@ -20,8 +20,8 @@ namespace SQLite3 {
 
     virtual ~Database();
 
-    Windows::Foundation::IAsyncAction^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
-    Windows::Foundation::IAsyncAction^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
+    Windows::Foundation::IAsyncOperation<int>^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
+    Windows::Foundation::IAsyncOperation<int>^ RunAsyncMap(Platform::String^ sql, ParameterMap^ params);
     Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsyncVector(Platform::String^ sql, ParameterVector^ params);
     Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsyncMap(Platform::String^ sql, ParameterMap^ params);
     Windows::Foundation::IAsyncOperation<Platform::String^>^ AllAsyncVector(Platform::String^ sql, ParameterVector^ params);
@@ -35,9 +35,41 @@ namespace SQLite3 {
     long long GetLastInsertRowId();
     Platform::String^ GetLastError();
 
-    event ChangeHandler^ Insert;
-    event ChangeHandler^ Update;
-    event ChangeHandler^ Delete;
+    event ChangeHandler^ Insert {
+      Windows::Foundation::EventRegistrationToken add(ChangeHandler^ handler) {
+        addChangeHandler(insertChangeHandlers);
+        return _Insert += handler;
+      }
+
+      void remove(Windows::Foundation::EventRegistrationToken token) {
+        _Insert -= token;
+        removeChangeHandler(insertChangeHandlers);
+      }
+    }
+
+    event ChangeHandler^ Update {
+      Windows::Foundation::EventRegistrationToken add(ChangeHandler^ handler) {
+        addChangeHandler(updateChangeHandlers);
+        return _Update += handler;
+      }
+
+      void remove(Windows::Foundation::EventRegistrationToken token) {
+        _Update -= token;
+        removeChangeHandler(updateChangeHandlers);
+      }
+    }
+
+    event ChangeHandler^ Delete {
+      Windows::Foundation::EventRegistrationToken add(ChangeHandler^ handler) {
+        addChangeHandler(deleteChangeHandlers);
+        return _Delete += handler;
+      }
+
+      void remove(Windows::Foundation::EventRegistrationToken token) {
+        _Delete -= token;
+        removeChangeHandler(deleteChangeHandlers);
+      }
+    }
 
     property Platform::String^ CollationLanguage {
       Platform::String^ get() {
@@ -64,7 +96,7 @@ namespace SQLite3 {
     StatementPtr PrepareAndBind(Platform::String^ sql, ParameterContainer params);
 
     template <typename ParameterContainer>
-    Windows::Foundation::IAsyncAction^ RunAsync(Platform::String^ sql, ParameterContainer params);
+    Windows::Foundation::IAsyncOperation<int>^ RunAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
     Windows::Foundation::IAsyncOperation<Platform::String^>^ OneAsync(Platform::String^ sql, ParameterContainer params);
     template <typename ParameterContainer>
@@ -80,5 +112,16 @@ namespace SQLite3 {
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
     std::wstring lastErrorMsg;
+
+    event ChangeHandler^ _Insert;
+    int insertChangeHandlers;
+    event ChangeHandler^ _Update;
+    int updateChangeHandlers;
+    event ChangeHandler^ _Delete;
+    int deleteChangeHandlers;
+
+    int changeHandlers;
+    void addChangeHandler(int& handlerCount);
+    void removeChangeHandler(int& handlerCount);
   };
 }
