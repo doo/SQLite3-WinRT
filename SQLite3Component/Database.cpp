@@ -111,6 +111,7 @@ namespace SQLite3 {
   Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
     : collationLanguage(nullptr) // will use user locale
     , dispatcher(dispatcher)
+    , fireEvents(true)
     , changeHandlers(0)
     , insertChangeHandlers(0)
     , updateChangeHandlers(0)

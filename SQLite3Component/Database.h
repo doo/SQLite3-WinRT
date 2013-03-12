@@ -16,8 +16,6 @@ namespace SQLite3 {
     static Database^ Open(Platform::String^ dbPath);
     static void EnableSharedCache(bool enable);
 
-    Database() : fireEvents(false), sqlite(nullptr) {}
-
     virtual ~Database();
 
     Windows::Foundation::IAsyncOperation<int>^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
