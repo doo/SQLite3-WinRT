@@ -14,8 +14,20 @@ namespace SQLite3 {
   public ref class Database sealed {
   public:
     static Database^ Open(Platform::String^ dbPath);
-    static void EnableSharedCache(bool enable);
 
+    static property bool SharedCache {
+      bool get() const {
+        return sharedCache;
+      };
+
+      void set(bool value) {
+        int ret = sqlite3_enable_shared_cache(value);
+        if (ret != SQLITE_OK) {
+          throwSQLiteError(ret);
+        }
+      };
+    }
+    
     virtual ~Database();
 
     Windows::Foundation::IAsyncOperation<int>^ RunAsyncVector(Platform::String^ sql, ParameterVector^ params);
@@ -28,10 +40,24 @@ namespace SQLite3 {
     Windows::Foundation::IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
     Windows::Foundation::IAsyncAction^ VacuumAsync();
+    
+    property Platform::String^ LastError {
+      Platform::String^ get() {
+        return ref new Platform::String(lastErrorMsg.c_str());
+      }
+    }
 
-    bool GetAutocommit();
-    long long GetLastInsertRowId();
-    Platform::String^ GetLastError();
+    property long long LastInsertRowId {
+      long long get() {
+        return sqlite3_last_insert_rowid(sqlite);
+      }
+    }
+
+    property bool AutoCommit {
+      bool get() {
+        return sqlite3_get_autocommit(sqlite) != 0;
+      }
+    }
 
     event ChangeHandler^ Insert {
       Windows::Foundation::EventRegistrationToken add(ChangeHandler^ handler) {
@@ -88,6 +114,7 @@ namespace SQLite3 {
     }
 
   private:
+    static bool sharedCache;
     Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^ dispatcher);
 
     template <typename ParameterContainer>
