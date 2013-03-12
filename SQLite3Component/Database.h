@@ -16,7 +16,7 @@ namespace SQLite3 {
     static Database^ Open(Platform::String^ dbPath);
 
     static property bool SharedCache {
-      bool get() const {
+      bool get() {
         return sharedCache;
       };
 
@@ -44,19 +44,19 @@ namespace SQLite3 {
     property Platform::String^ LastError {
       Platform::String^ get() {
         return ref new Platform::String(lastErrorMsg.c_str());
-      }
+      };
     }
 
     property long long LastInsertRowId {
       long long get() {
         return sqlite3_last_insert_rowid(sqlite);
-      }
+      };
     }
 
     property bool AutoCommit {
       bool get() {
         return sqlite3_get_autocommit(sqlite) != 0;
-      }
+      };
     }
 
     event ChangeHandler^ Insert {

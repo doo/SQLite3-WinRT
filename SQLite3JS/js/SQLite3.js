@@ -127,7 +127,7 @@
           : funcName + "Vector";
 
         return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
-          return wrapException(error, that.getLastError());
+          return wrapException(error, that.lastError);
         });
       });
     }
@@ -174,15 +174,6 @@
           return results;
         });
       },
-      getLastInsertRowId: function () {
-        return connection.getLastInsertRowId();
-      },
-      getAutocommit: function () {
-        return connection.getAutocommit();
-      },
-      getLastError: function () {
-        return connection.getLastError();
-      },
       itemDataSource: function (sql, args, keyColumnName, groupKeyColumnName) {
         if (typeof args === 'string') {
           groupKeyColumnName = keyColumnName;
@@ -228,6 +219,18 @@
       "fireEvents": {
         set: function (value) { connection.fireEvents = value; },
         get: function () { return connection.fireEvents; },
+        enumerable: true
+      },
+      "lastError": {
+        get: function () { return connection.lastError; },
+        enumerable: true
+      },
+      "autoCommit": {
+        get: function () { return connection.autoCommit; },
+        enumerable: true
+      },
+      "lastInsertRowId": {
+        get: function () { return connection.lastInsertRowId; },
         enumerable: true
       }
     });
