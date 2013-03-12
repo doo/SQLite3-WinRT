@@ -367,7 +367,13 @@
   SQLite3JS.openAsync = function (dbPath) {
     try {
       var db = wrapDatabase(SQLite3.Database.open(dbPath));
-      return WinJS.Promise.wrap(db);
+      return db.oneAsync("SELECT sqlite_version() as version, sqlite_source_id() as sourceId")
+      .then(function(result) {
+        SQLite3JS.log("SQLite3 version: " + result.version + " (" + result.sourceId + ")");
+      })
+      .then(function(){
+        return WinJS.Promise.wrap(db);
+      });      
     } catch (error) {
       return wrapException(error);
     }
