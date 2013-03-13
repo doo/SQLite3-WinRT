@@ -2,7 +2,17 @@
 
 Async SQLite for (JavaScript) Windows Store apps.
 
-## Changelog for version 1.1.0
+## Changelog
+
+### 1.1.2
+
+Some minor API changes:
+1. `getLastInsertRowId()` function becomes `lastInsertRowId` property
+2. `getAutocommit()` function becomes `autoCommit` property
+3. `getLastError()` function becomes `lastError` property
+4. `enableSharedCache()` function becomes `sharedCache` property
+
+### 1.1.0
 
 This version introduces a **breaking API change** along with some enhancements:
 
