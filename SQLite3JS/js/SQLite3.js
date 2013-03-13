@@ -375,7 +375,7 @@
         SQLite3JS.log("SQLite3 version: " + result.version + " (" + result.sourceId + ")");
       })
       .then(function(){
-        return WinJS.Promise.wrap(db);
+        return db;
       });      
     } catch (error) {
       return wrapException(error);
