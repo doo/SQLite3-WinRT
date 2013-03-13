@@ -147,7 +147,7 @@
         waitsForPromise(
           db.runAsync('INSERT INTO Item(name) VALUES(:name)', rowToInsert)
           .then(function () {
-            var id = db.getLastInsertRowId();
+            var id = db.lastInsertRowId;
             return db.oneAsync('SELECT * FROM Item WHERE rowId=?', [id]);
           }).then(function (result) {
             expect(result.name).toEqual("Foo\nBar'n");
@@ -261,11 +261,11 @@
       });
     });
 
-    describe('getLastInsertRowId()', function () {
+    describe('lastInsertRowId', function () {
       it('should retrieve the id of the last inserted row', function () {
         waitsForPromise(
           db.runAsync("INSERT INTO Item (name) VALUES (?)", ['Ananas']).then(function () {
-            var id = db.getLastInsertRowId();
+            var id = db.lastInsertRowId;
             expect(id).toEqual(4);
           })
         );
@@ -424,7 +424,7 @@
             dbFilename = tempFolder.path + "\\concurrencyTest.sqlite",
             db1 = null, db2 = null;
 
-        SQLite3.Database.enableSharedCache(true);
+        SQLite3.Database.sharedCache = true;
 
         waitsForPromise(
           SQLite3JS.openAsync(dbFilename)
@@ -485,7 +485,7 @@
       it('should report the error of the last statement', function () {
         waitsForPromise(
           db.runAsync('invalid sql').then(null, function (err) {
-            expect(db.getLastError()).toEqual('near \"invalid\": syntax error');
+            expect(db.lastError).toEqual('near \"invalid\": syntax error');
           })
         );
       });
