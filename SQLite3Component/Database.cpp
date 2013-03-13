@@ -88,6 +88,8 @@ namespace SQLite3 {
     sqlite3_result_text16(context, translation->Data(), (translation->Length()+1)*sizeof(wchar_t), SQLITE_TRANSIENT);
   }
 
+  bool Database::sharedCache = false;
+
   Database^ Database::Open(Platform::String^ dbPath) {
     sqlite3* sqlite;
     int ret = sqlite3_open16(dbPath->Data(), &sqlite);
@@ -101,16 +103,10 @@ namespace SQLite3 {
     return ref new Database(sqlite, dispatcher);
   }
 
-  void Database::EnableSharedCache(bool enable) {
-    int ret = sqlite3_enable_shared_cache(enable);
-    if (ret != SQLITE_OK) {
-      throwSQLiteError(ret);
-    }
-  }
-
   Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
     : collationLanguage(nullptr) // will use user locale
     , dispatcher(dispatcher)
+    , fireEvents(true)
     , changeHandlers(0)
     , insertChangeHandlers(0)
     , updateChangeHandlers(0)
@@ -290,18 +286,6 @@ namespace SQLite3 {
         throw;
       }
     });
-  }
-
-  bool Database::GetAutocommit() {
-    return sqlite3_get_autocommit(sqlite) != 0;
-  }
-
-  long long Database::GetLastInsertRowId() {
-    return sqlite3_last_insert_rowid(sqlite);
-  }
-
-  Platform::String^ Database::GetLastError() {
-    return ref new Platform::String(lastErrorMsg.c_str());
   }
 
   template <typename ParameterContainer>

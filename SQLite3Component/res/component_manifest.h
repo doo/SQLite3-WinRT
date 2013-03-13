@@ -3,7 +3,8 @@
 
 #define COMPONENT_VERSION_MAJOR 1
 #define COMPONENT_VERSION_MINOR 1
-#define COMPONENT_VERSION_BUILD 0
+#define COMPONENT_VERSION_BUILD 2
+#define COMPONENT_VERSION_REVISION 0
 
 #define _VERSION_STR(a,b,c,d)   #a "." #b "." #c "." #d
 #define VERSION_STR(a,b,c,d)    _VERSION_STR(a,b,c,d)
