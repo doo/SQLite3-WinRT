@@ -98,6 +98,7 @@
         message += ': ' + detailedMessage;
       }
       error = new Error(resultCode, message);
+      error.resultCode = resultCode;
     } else {
       error = exception;
     }
