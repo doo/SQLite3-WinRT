@@ -97,10 +97,8 @@
       if (detailedMessage) {
         message += ': ' + detailedMessage;
       }
-      error = {
-        message: message,
-        resultCode: resultCode
-      };
+      error = new Error(resultCode, message);
+      error.resultCode = resultCode;
     } else {
       error = exception;
     }
