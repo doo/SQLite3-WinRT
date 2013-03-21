@@ -105,22 +105,6 @@ namespace SQLite3 {
     return ToWString(sqlite3_bind_parameter_name(statement, index));
   }
 
-  int Statement::BindText(int index, Platform::String^ val) {
-    return sqlite3_bind_text16(statement, index, val->Data(), -1, SQLITE_TRANSIENT);
-  }
-
-  int Statement::BindInt(int index, int64 val) {
-    return sqlite3_bind_int64(statement, index, val);
-  }
-
-  int Statement::BindDouble(int index, double val) {
-    return sqlite3_bind_double(statement, index, val);
-  }
-
-  int Statement::BindNull(int index) {
-    return sqlite3_bind_null(statement, index);
-  }
-
   void Statement::Run() {
     Step();
   }
@@ -234,42 +218,11 @@ namespace SQLite3 {
     outstream << L'}';
   }
 
-  Platform::Object^ Statement::GetColumn(int index) {
-    switch (ColumnType(index)) {
-    case SQLITE_INTEGER:
-      return ColumnInt(index);
-    case SQLITE_FLOAT:
-      return ColumnDouble(index);
-    case SQLITE_TEXT:
-      return ColumnText(index);
-    case SQLITE_NULL:
-      return nullptr;
-    default:
-      throw ref new Platform::FailureException();
-    }
-  }
-
   int Statement::ColumnCount() {
     return sqlite3_column_count(statement);
   }
 
   int Statement::ColumnType(int index) {
     return sqlite3_column_type(statement, index);
-  }
-
-  Platform::String^ Statement::ColumnName(int index) {
-    return ref new Platform::String(static_cast<const wchar_t*>(sqlite3_column_name16(statement, index)));
-  }
-
-  Platform::String^ Statement::ColumnText(int index) {
-    return ref new Platform::String(static_cast<const wchar_t*>(sqlite3_column_text16(statement, index)));
-  }
-
-  int64 Statement::ColumnInt(int index) {
-    return sqlite3_column_int64(statement, index);
-  }
-
-  double Statement::ColumnDouble(int index) {
-    return sqlite3_column_double(statement, index);
   }
 }
