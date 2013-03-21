@@ -4,8 +4,14 @@
   var SQLite3JS, Database, ItemDataSource, GroupDataSource;
 
   SQLite3JS = {
+    /// Set this to true to get some more logging output
     debug: false,
-    log: console.log.bind(console)
+    logger: {
+      trace: console.log.bind(console),
+      warn: console.warn.bind(console),
+      error: console.error.bind(console),
+      info: console.info.bind(console)
+    }
   };
 
   function PromiseQueue() {
@@ -133,8 +139,7 @@
       var argString, preparedArgs, fullFuncName;
 
       if (SQLite3JS.debug) {
-        argString = args ? ' ' + args.toString() : '';
-        SQLite3JS.log('Database#' + funcName + ': ' + sql + argString);
+        SQLite3JS.logger.trace(funcName + ': ' + formatStatementAndArgs(sql, args));
       }
 
       return queue.append(function () {
@@ -386,19 +391,26 @@
   );
 
   SQLite3JS.openAsync = function (dbPath) {
-    try {
-      var db = wrapDatabase(SQLite3.Database.open(dbPath));
-      return db.oneAsync("SELECT sqlite_version() as version, sqlite_source_id() as sourceId")
-      .then(function(result) {
-        SQLite3JS.log("SQLite3 version: " + result.version + " (" + result.sourceId + ")");
-      })
-      .then(function(){
+    /// <summary>
+    /// Opens a database from disk or in memory.
+    /// </summary>
+    /// <param name="dbPath" type="String">
+    /// Path to a file that is located in your apps local/temp/roaming storage or the string ":memory:" 
+    /// to create a database in memory
+    /// </param>
+    /// <returns>Database object upon completion of the promise</returns>
+    return SQLite3.Database.openAsync(dbPath)
+    .then(function opened(connection) {
+      var db = wrapDatabase(connection);
+      return db.oneAsync("SELECT sqlite_version() || ' (' || sqlite_source_id() || ')' as version")
+      .then(function (result) {
+        SQLite3JS.logger.info("SQLite3 version: " + result.version);
         return db;
-      });      
-    } catch (error) {
-      return wrapException(error);
-    }
+      });
+    }, function onerror(error) {
+      return wrapException(error, 'Could not open database "' + dbPath + '"', "openAsync");
+    });
   };
-
+  
   return SQLite3JS;
 }());
