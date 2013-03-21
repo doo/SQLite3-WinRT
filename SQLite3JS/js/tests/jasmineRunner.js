@@ -1,11 +1,16 @@
-﻿(function() {
-  var isPartOfSuite, jasmineEnv, testConfig = {};
+﻿(function () {
+  "use strict";
 
-  jasmineEnv = jasmine.getEnv();
+  function require(path) {
+    var element = document.createElement("script");
+    element.src = path;
+    console.info("Require script " + element.src);
+    document.head.appendChild(element);
+  }
 
-  jasmineEnv.updateInterval = 1000;
+  NodeList.prototype.forEach = Array.prototype.forEach;
 
-  isPartOfSuite = function(suite, name) {
+  function isPartOfSuite(suite, name) {
     if (!suite) {
       return false;
     }
@@ -18,134 +23,137 @@
     return isPartOfSuite(suite.parentSuite, name);
   }
 
-  errorMessage = function (error) {
-    var message;
-    message = error.message || '';
-    if (error.resultCode) {
-      message += " (Code " + error.resultCode + ")";
-    }
-    return message;
-  };
-
-  async = function (testFunc, message, timeout) {
-    var done;
+  function async(testFunc, timeout, message) {
+    var done, testFuncPromise;
     done = false;
-    runs(function () {
-      var testFuncPromise;
+    if (testFunc.then && typeof testFunc.then === "function") {
+      testFuncPromise = testFunc;
+    } else {
       testFuncPromise = new WinJS.Promise(function (complete) {
         return complete(testFunc());
       });
-      return testFuncPromise.then(function () {
-        done = true;
-      }, function (error) {
-        var message;
-        if (error.constructor === Array) {
-          message = error.filter(notNull).map(errorMessage).join(', ');
-        } else {
-          message = errorMessage(error);
-        }
-        jasmine.getEnv().currentSpec.fail(errorMessage);
-        done = true;
-      });
+    }
+    testFuncPromise.done(function () {
+      done = true;
+    }, function (error) {
+      jasmine.getEnv().currentSpec.fail(error.message);
+      done = true;
     });
     return waitsFor(function () {
       return done;
     }, message, timeout);
-  };
+  }
 
-  WinJS.Namespace.define("spec", {
-    async: async
-  });
-
-  lintFileAsync = function (file) {
+  function lintFileAsync(file, predefines) {
     var options = {
       white: true,
       nomen: true,
       bitwise: true,
       predef: [
-        'WinJS', 'Windows', 'console', 'document', 'setImmediate',
-        "spec",
-        'jasmine', 'describe', 'xdescribe', 'it', 'xit', 'beforeEach', 'afterEach',
-        'expect', 'runs', "runtime"
-      ].concat(testConfig.jslintPredefines)
+        "JSLINT", "window", 'WinJS', 'Windows', 'console', 'document', 'setImmediate'
+      ].concat(predefines || [])
     };
-    return Windows.Storage.FileIO.readTextAsync(file).then(function (fileContent) {
+    return Windows.Storage.PathIO.readTextAsync(file).then(function fileRead(fileContent) {
       if (!JSLINT(fileContent, options)) {
-        throw new Error(JSLINT.report(true));
+        var error, message = "The file " + file + " contains the following errors:\n";
+        message += JSLINT.errors.map(function format(error) {
+          if (error) {
+            return error.reason + " at line " + error.line + ", column " + error.character;
+          } 
+          return "JSLint gave up";
+        }).join("\n");
+        error = new WinJS.ErrorFromName("JSLintError", message);
+        error.errors = JSLINT.errors;
+        error.htmlReport = JSLINT.report(true);
+        throw error;
       }
     });
   }
 
-  loadSpecsAsync = function () {
-    return Windows.ApplicationModel.Package.current.installedLocation.getFolderAsync("spec").then(function(folder) {
-      var queryOptions = new Windows.Storage.Search.QueryOptions(Windows.Storage.Search.CommonFileQuery.orderByName, [".js"]);
-      var query = folder.createFileQueryWithOptions(queryOptions);
+  WinJS.Namespace.define("spec", {
+    async: async,
+    lintFileAsync: lintFileAsync,
+    require: require,
+    config: {}
+  });
+
+  function loadSpecsAsync() {
+    return Windows.ApplicationModel.Package.current.installedLocation.getFolderAsync("spec").then(function gotFolder(folder) {
+      var queryOptions = new Windows.Storage.Search.QueryOptions(Windows.Storage.Search.CommonFileQuery.orderByName, [".js"]),
+          query = folder.createFileQueryWithOptions(queryOptions);
       return query.getFilesAsync().then(function (files) {
-        // Return a promise so that we can chain the sync forEach
-        var filesPromise = WinJS.Promise.as();
         files.forEach(function (file) {
-          filesPromise = lintFileAsync(file).then(function () {
-            var element = document.createElement("script");
-            element.src = "/spec/" + file.name;
-            document.head.appendChild(element);
-          }, function error(e) {
-            var element = document.createElement("div");
-            element.innerHTML = "<p>File: " + file.name + "</p>" + e.message;
-            document.getElementById("jslint_errors").appendChild(element);
-            //console.error(file.name + "does not lint ok: " + e.message);
-          });
+          var element = document.createElement("script");
+          element.src = "/spec/" + file.name;
+          console.info("Loading spec " + element.src);
+          document.head.appendChild(element);
         });
-        return filesPromise;
       });
     });
   }
 
-  Windows.Storage.StorageFile.getFileFromApplicationUriAsync('testConfig.json'.toAppPackageUri())
-  .then(function (file) {
-    return Windows.Storage.FileIO.readTextAsync(file);
-  }).done(function(buffer) {
-    var jasmineReporter, oldSpecFilter, _ref1, _ref2;
-    try {
-      testConfig = JSON.parse(buffer);
-    } catch (e) {
-      window.console.error("Could not load config.json file", e);
-    }
-    jasmineReporter = new jasmine.HtmlReporter;
-    jasmineEnv.addReporter(jasmineReporter);
-    if (testConfig.xmlOutput && jasmine.JUnitXmlReporter) {
-      jasmineEnv.addReporter(new jasmine.JUnitXmlReporter("testResults"));
-    }
-    if ((testConfig != null ? (_ref1 = testConfig.suitesToRun) != null ? _ref1.length : void 0 : void 0) > 0) {
-      if (testConfig.suitesToRun.length === 1) {
-        if (testConfig.suitesToRun[0] === "") {
-          delete testConfig.suitesToRun;
-        }
-      }
-      if (((_ref2 = testConfig.suitesToRun) != null ? _ref2.length : void 0) > 0) {
-        oldSpecFilter = jasmineReporter.specFilter;
-        jasmineReporter.specFilter = function(spec) {
-          var specSuiteFilter;
-          specSuiteFilter = function(spec) {
-            return testConfig.suitesToRun.some(isPartOfSuite.bind(this, spec.suite));
-          };
-          return oldSpecFilter.call(this, spec) && specSuiteFilter(spec);
-        };
-        jasmineEnv.specFilter = function(spec) {
-          return jasmineReporter.specFilter(spec);
-        };
-      }
-    }
-    if (testConfig.quitAfterTests) {
-      WinJS.Application.addEventListener('jasmine.junitreporter.complete', function() {
-        return window.close();
-      });
-    }
-    WinJS.Application.start();    
-    return WinJS.Utilities.ready(function () {
-      loadSpecsAsync().then(function () {
-        return jasmineEnv.execute();
+  describe("JSLint", function () {
+    it("should evaluate all javascript code just fine", function () {
+      var jsLintPredefines = ["require", "spec", 'jasmine', 'describe', 'xdescribe', 'it', 'xit', 'beforeEach', 'afterEach',
+          'expect', 'runs', "waitsFor"].concat(spec.config.jslintPredefines || []),
+          completePromise = WinJS.Promise.as();
+      document.head.querySelectorAll("script:not([data-jslint=false])").forEach(function (scriptElement) {
+        console.info("JSLinting " + scriptElement.src);
+        var predefines = (scriptElement.getAttribute("data-jslint-predefines") || "").split(/[ ,]+/);
+        async(lintFileAsync(scriptElement.src, jsLintPredefines.concat(predefines)));
       });
     });
   });
 
-}).call(this);
+  document.addEventListener("DOMContentLoaded", function (event) {
+    WinJS.Application.queueEvent({ type: "run" });
+  });
+
+  WinJS.Application.addEventListener("run", function (event) {
+    event.setPromise(loadSpecsAsync().then(function specsLoaded() {
+      var env = jasmine.getEnv(),
+          htmlReporter, oldSpecFilter;
+      
+      htmlReporter = new jasmine.HtmlReporter();
+      htmlReporter.logRunningSpecs = true;
+      env.addReporter(htmlReporter);
+        
+      env.specFilter = function (spec) {
+        return htmlReporter.specFilter(spec);
+      };
+
+      if (spec.config.junitReport) {
+        env.addReporter(new jasmine.JUnitXmlReporter("testResults"));
+      }
+      
+      if (spec.config && spec.config.suitesToRun && spec.config.suitesToRun.length > 0) {
+        if (spec.config.suitesToRun.length === 1) {
+          if (spec.config.suitesToRun[0] === "") {
+            delete spec.config.suitesToRun;
+          }
+        }
+        if (spec.config.suitesToRun && spec.config.suitesToRun.length > 0) {
+          oldSpecFilter = htmlReporter.specFilter;
+          htmlReporter.specFilter = function(_spec) {
+            var specSuiteFilter;
+            specSuiteFilter = function(_spec) {
+              return spec.config.suitesToRun.some(isPartOfSuite.bind(this, _spec.suite));
+            };
+            return oldSpecFilter.call(this, _spec) && specSuiteFilter(_spec);
+          };
+          jasmine.getEnv().specFilter = function(_spec) {
+            return htmlReporter.specFilter(_spec);
+          };
+        }
+      }
+      if (spec.config.quitAfterTests) {
+        WinJS.Application.addEventListener('jasmine.junitreporter.complete', function() {
+          return window.close();
+        });
+      }
+      jasmine.getEnv().execute();
+    }));
+  });
+  
+  WinJS.Application.start();
+}());

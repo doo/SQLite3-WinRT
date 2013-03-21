@@ -71,7 +71,7 @@
     <Content Include="lib\jasmine-reporters\jasmine.junit_reporter.js" />
     <Content Include="lib\jslint\jslint.js" />
     <Content Include="spec\SQLite3Spec.js" />
-    <Content Include="testConfig.json" />
+    <Content Include="config.js" />
     <None Include="SQLite3JS_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
