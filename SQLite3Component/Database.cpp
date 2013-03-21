@@ -90,17 +90,20 @@ namespace SQLite3 {
 
   bool Database::sharedCache = false;
 
-  Database^ Database::Open(Platform::String^ dbPath) {
-    sqlite3* sqlite;
-    int ret = sqlite3_open16(dbPath->Data(), &sqlite);
-
-    if (ret != SQLITE_OK) {
-      sqlite3_close(sqlite);
-      throwSQLiteError(ret);
-    }
-
+  IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
     CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
-    return ref new Database(sqlite, dispatcher);
+    
+    return Concurrency::create_async([dbPath, dispatcher]() {
+      sqlite3* sqlite;
+      int ret = sqlite3_open16(dbPath->Data(), &sqlite);
+
+      if (ret != SQLITE_OK) {
+        sqlite3_close(sqlite);
+        throwSQLiteError(ret, dbPath);
+      }
+
+      return ref new Database(sqlite, dispatcher);
+    });    
   }
 
   Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)

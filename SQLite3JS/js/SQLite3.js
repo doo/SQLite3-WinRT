@@ -88,17 +88,37 @@
     return (args instanceof Array) ? args : toPropertySet(args);
   }
 
-  function wrapException(exception, detailedMessage) {
-    var error, message, resultCode;
+  function formatStatementAndArgs(sql, args) {
+    var argString = args ? ' ' + args.toString() : '';
+    return '"' + sql + '", ' + argString;
+  }
+
+  function wrapException(exception, detailedMessage, functionName, sql, args) {
+    var error, message, resultCode, number;
 
     if (exception.hasOwnProperty('number')) {
-      resultCode = exception.number & 0xffff;
-      message = 'SQLite Error ' + resultCode;
-      if (detailedMessage) {
-        message += ': ' + detailedMessage;
+      // Convert the COM error to an unsigned hex value that we can check in JS like E_FAIL == 0x80004005
+      number = 0xffffffff + exception.number + 1;
+      resultCode = number & 0x20000000 ? exception.number & 0xffff : 0;
+      message = (resultCode > 0 ? resultCode : "0x" + number.toString(16)) + ": ";
+      if (functionName) {
+        message += functionName;
+
+        if (sql) {
+          message += '(' + formatStatementAndArgs(sql, args) + ') ';
+        } else {
+          message += " ";
+        }
       }
-      error = new Error(resultCode, message);
+      if (detailedMessage) {
+        message += detailedMessage;
+      }
+      error = new WinJS.ErrorFromName("SQLiteError", message);
       error.resultCode = resultCode;
+      error.number = number;
+      error.sql = sql;
+      error.args = args;
+      error.functionName = functionName;
     } else {
       error = exception;
     }
@@ -125,7 +145,7 @@
           : funcName + "Vector";
 
         return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
-          return wrapException(error, that.lastError);
+          return wrapException(error, that.lastError, funcName, sql, args);
         });
       });
     }
