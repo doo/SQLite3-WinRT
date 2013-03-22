@@ -476,12 +476,12 @@
 
       beforeEach(function () {
         spec.async(
-          db.runAsync("CREATE TABLE if not exists blobs(title TEXT, img BLOB)")
+          db.runAsync("CREATE TABLE images(title TEXT, img BLOB)")
         );
       });
 
       afterEach(function () {
-        spec.async(db.runAsync("DROP TABLE blobs"));
+        spec.async(db.runAsync("DROP TABLE images"));
       });
 
       it("should not allow other object types than buffers to be inserted", function () {
@@ -489,7 +489,7 @@
         spec.async(
           Windows.ApplicationModel.Package.current.installedLocation.getFileAsync("images\\logo.png")
           .then(function gotFile(file) {
-            return db.runAsync("INSERT INTO blobs(title, img) VALUES (?, ?)", ["a title", file]);
+            return db.runAsync("INSERT INTO images(title, img) VALUES (?, ?)", ["a title", file]);
           }).then(function shouldNotComplete() {
             thisSpec.fail('Wooot? The error handler was not called.');
           }, function shouldError(error) {
@@ -508,9 +508,9 @@
               return (originalBuffer = buffer);
             });
           }).then(function readBuffer(buffer) {
-            return db.runAsync("INSERT INTO blobs(title, img) VALUES (?, ?)", ["a title", buffer]);
+            return db.runAsync("INSERT INTO images(title, img) VALUES (?, ?)", ["a title", buffer]);
           }).then(function inserted(count) {
-            return db.oneAsync("SELECT img FROM blobs WHERE title='a title'");
+            return db.oneAsync("SELECT img FROM images WHERE title='a title'");
           }).then(function selected(row) {
             var div, selectedBuffer = CryptographicBuffer.decodeFromBase64String(row.img);
             expect(CryptographicBuffer.compare(originalBuffer, selectedBuffer)).toBeTruthy();

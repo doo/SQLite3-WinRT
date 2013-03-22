@@ -4,6 +4,15 @@ Async SQLite for (JavaScript) Windows Store apps.
 
 ## Changelog
 
+### 1.3.4
+
+#### Support for blobs
+
+This allows you to insert blobs into your database and read them back as BASE64 encoded values in your JSON result.
+See [the blob example](https://github.com/doo/SQLite3-WinRT/tree/master/SQLite3JS/example/blobs.js) how to use it in your apps.
+If you need an IBuffer back from the db you can use [CryptographicBuffer.DecodeFromBase64String](http://msdn.microsoft.com/en-us/library/windows/apps/windows.security.cryptography.cryptographicbuffer.decodefrombase64string).
+
+
 ### 1.1.2
 
 Some minor API changes:
@@ -81,6 +90,6 @@ The API was inspired by [node-sqlite3][2].
 
 ## License
 
-Copyright (c) 2012 doo GmbH
+Copyright (c) 2012,2013 doo GmbH
 
 Licensed under the MIT License, see LICENSE file.
