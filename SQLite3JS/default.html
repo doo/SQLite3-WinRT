@@ -2,17 +2,17 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>SQLite3JS Specs</title>
+    <title>Specs</title>
 
     <!-- WinJS -->
-    <script src="//Microsoft.WinJS.1.0/js/base.js"></script>
-    <script src="//Microsoft.WinJS.1.0/js/ui.js"></script>
+    <script src="//Microsoft.WinJS.1.0/js/base.js" data-jslint="false"></script>
+    <script src="//Microsoft.WinJS.1.0/js/ui.js" data-jslint="false"></script>
 
     <!-- Jasmine -->
-    <link href="/lib/jasmine-1.1.0/jasmine.css" rel="stylesheet">
-    <script src="/lib/jasmine-1.1.0/jasmine.js"></script>
-    <script src="/lib/jasmine-1.1.0/jasmine-html.js"></script>
-    <script src="/lib/jasmine-reporters/jasmine.junit_reporter.js"></script>
+    <link href="/lib/jasmine-1.3.1/jasmine.css" rel="stylesheet">
+    <script src="/lib/jasmine-1.3.1/jasmine.js" data-jslint="false"></script>
+    <script src="/lib/jasmine-1.3.1/jasmine-html.js" data-jslint="false"></script>
+    <script src="/lib/jasmine-reporters/jasmine.junit_reporter.js" data-jslint="false"></script>
 
     <!-- JSLint -->
     <script src="/lib/jslint/jslint.js"></script>
@@ -21,11 +21,11 @@
     <script src="/js/tests/string.monkeypatch.js"></script>
 
     <!-- Specs Runner -->
-    <script src="/js/tests/jasmineRunner.js"></script>
+    <script src="/js/tests/jasmineRunner.js" data-jslint-predefines="NodeList require"></script>
 
-    <script src="/js/SQLite3.js"></script>
+    <!-- Config -->
+    <script src="config.js"></script>
 </head>
 <body>
-  <div id="jslint_errors"></div>
 </body>
 </html>

@@ -13,7 +13,7 @@ namespace SQLite3 {
   
   public ref class Database sealed {
   public:
-    static Database^ Open(Platform::String^ dbPath);
+    static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
 
     static property bool SharedCache {
       bool get() {
@@ -23,7 +23,7 @@ namespace SQLite3 {
       void set(bool value) {
         int ret = sqlite3_enable_shared_cache(value);
         if (ret != SQLITE_OK) {
-          throwSQLiteError(ret);
+          throwSQLiteError(ret, ref new Platform::String(L"Could not set shared cache"));
         }
       };
     }
