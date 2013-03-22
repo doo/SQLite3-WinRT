@@ -402,9 +402,12 @@
     return SQLite3.Database.openAsync(dbPath)
     .then(function opened(connection) {
       var db = wrapDatabase(connection);
+      if (SQLite3JS.version) {
+        return db;
+      }
       return db.oneAsync("SELECT sqlite_version() || ' (' || sqlite_source_id() || ')' as version")
       .then(function (result) {
-        SQLite3JS.logger.info("SQLite3 version: " + result.version);
+        SQLite3JS.logger.info("SQLite3 version: " + (SQLite3JS.version = result.version));
         return db;
       });
     }, function onerror(error) {
