@@ -4,8 +4,14 @@
   var SQLite3JS, Database, ItemDataSource, GroupDataSource;
 
   SQLite3JS = {
+    /// Set this to true to get some more logging output
     debug: false,
-    log: console.log.bind(console)
+    logger: {
+      trace: console.log.bind(console),
+      warn: console.warn.bind(console),
+      error: console.error.bind(console),
+      info: console.info.bind(console)
+    }
   };
 
   function PromiseQueue() {
@@ -88,17 +94,37 @@
     return (args instanceof Array) ? args : toPropertySet(args);
   }
 
-  function wrapException(exception, detailedMessage) {
-    var error, message, resultCode;
+  function formatStatementAndArgs(sql, args) {
+    var argString = args ? ' ' + args.toString() : '';
+    return '"' + sql + '", ' + argString;
+  }
+
+  function wrapException(exception, detailedMessage, functionName, sql, args) {
+    var error, message, resultCode, number;
 
     if (exception.hasOwnProperty('number')) {
-      resultCode = exception.number & 0xffff;
-      message = 'SQLite Error ' + resultCode;
-      if (detailedMessage) {
-        message += ': ' + detailedMessage;
+      // Convert the COM error to an unsigned hex value that we can check in JS like E_FAIL == 0x80004005
+      number = 0xffffffff + exception.number + 1;
+      resultCode = number & 0x20000000 ? exception.number & 0xffff : 0;
+      message = (resultCode > 0 ? resultCode : "0x" + number.toString(16)) + ": ";
+      if (functionName) {
+        message += functionName;
+
+        if (sql) {
+          message += '(' + formatStatementAndArgs(sql, args) + ') ';
+        } else {
+          message += " ";
+        }
       }
-      error = new Error(resultCode, message);
+      if (detailedMessage) {
+        message += detailedMessage;
+      }
+      error = new WinJS.ErrorFromName("SQLiteError", message);
       error.resultCode = resultCode;
+      error.number = number;
+      error.sql = sql;
+      error.args = args;
+      error.functionName = functionName;
     } else {
       error = exception;
     }
@@ -113,8 +139,7 @@
       var argString, preparedArgs, fullFuncName;
 
       if (SQLite3JS.debug) {
-        argString = args ? ' ' + args.toString() : '';
-        SQLite3JS.log('Database#' + funcName + ': ' + sql + argString);
+        SQLite3JS.logger.trace(funcName + ': ' + formatStatementAndArgs(sql, args));
       }
 
       return queue.append(function () {
@@ -125,7 +150,7 @@
           : funcName + "Vector";
 
         return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
-          return wrapException(error, that.lastError);
+          return wrapException(error, that.lastError, funcName, sql, args);
         });
       });
     }
@@ -366,19 +391,29 @@
   );
 
   SQLite3JS.openAsync = function (dbPath) {
-    try {
-      var db = wrapDatabase(SQLite3.Database.open(dbPath));
-      return db.oneAsync("SELECT sqlite_version() as version, sqlite_source_id() as sourceId")
-      .then(function(result) {
-        SQLite3JS.log("SQLite3 version: " + result.version + " (" + result.sourceId + ")");
-      })
-      .then(function(){
+    /// <summary>
+    /// Opens a database from disk or in memory.
+    /// </summary>
+    /// <param name="dbPath" type="String">
+    /// Path to a file that is located in your apps local/temp/roaming storage or the string ":memory:" 
+    /// to create a database in memory
+    /// </param>
+    /// <returns>Database object upon completion of the promise</returns>
+    return SQLite3.Database.openAsync(dbPath)
+    .then(function opened(connection) {
+      var db = wrapDatabase(connection);
+      if (SQLite3JS.version) {
         return db;
-      });      
-    } catch (error) {
-      return wrapException(error);
-    }
+      }
+      return db.oneAsync("SELECT sqlite_version() || ' (' || sqlite_source_id() || ')' as version")
+      .then(function (result) {
+        SQLite3JS.logger.info("SQLite3 version: " + (SQLite3JS.version = result.version));
+        return db;
+      });
+    }, function onerror(error) {
+      return wrapException(error, 'Could not open database "' + dbPath + '"', "openAsync");
+    });
   };
-
+  
   return SQLite3JS;
 }());

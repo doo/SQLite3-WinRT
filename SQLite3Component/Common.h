@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include "sqlite3.h"
 
 namespace SQLite3 {
   ref class Database;
@@ -18,7 +19,7 @@ namespace SQLite3 {
   using Windows::Foundation::IAsyncAction;
   using Windows::Foundation::IAsyncOperation;
 
-  void throwSQLiteError(int resultCode);
+  void throwSQLiteError(int resultCode, Platform::String^ message = nullptr);
   std::wstring ToWString(const char* utf8String, unsigned int length = -1);
   Platform::String^ ToPlatformString(const char* utf8String, unsigned int length = -1);
 }

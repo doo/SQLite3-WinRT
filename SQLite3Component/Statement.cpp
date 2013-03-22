@@ -16,7 +16,7 @@ namespace SQLite3 {
 
     if (ret != SQLITE_OK) {
       sqlite3_finalize(statement);
-      throwSQLiteError(ret);
+      throwSQLiteError(ret, sql);
     }
 
     return StatementPtr(new Statement(statement));
@@ -56,22 +56,23 @@ namespace SQLite3 {
   }
 
   void Statement::BindParameter(int index, Platform::Object^ value) {
+    int result;
     if (value == nullptr) {
-      sqlite3_bind_null(statement, index);
+      result = sqlite3_bind_null(statement, index);
     } else {
       auto typeCode = Platform::Type::GetTypeCode(value->GetType());
       switch (typeCode) {
       case Platform::TypeCode::DateTime:
-        sqlite3_bind_int64(statement, index, FoundationTimeToUnixCompatible(static_cast<Windows::Foundation::DateTime>(value)));
+        result = sqlite3_bind_int64(statement, index, FoundationTimeToUnixCompatible(static_cast<Windows::Foundation::DateTime>(value)));
         break;
       case Platform::TypeCode::Double:
-        sqlite3_bind_double(statement, index, static_cast<double>(value));
+        result = sqlite3_bind_double(statement, index, static_cast<double>(value));
         break;
       case Platform::TypeCode::String:
-        sqlite3_bind_text16(statement, index, static_cast<Platform::String^>(value)->Data(), -1, SQLITE_TRANSIENT);
+        result = sqlite3_bind_text16(statement, index, static_cast<Platform::String^>(value)->Data(), -1, SQLITE_TRANSIENT);
         break;
       case Platform::TypeCode::Boolean:
-        sqlite3_bind_int(statement, index, static_cast<Platform::Boolean>(value) ? 1 : 0);
+        result = sqlite3_bind_int(statement, index, static_cast<Platform::Boolean>(value) ? 1 : 0);
         break;
       case Platform::TypeCode::Int8:
       case Platform::TypeCode::Int16:
@@ -79,15 +80,20 @@ namespace SQLite3 {
       case Platform::TypeCode::UInt8:
       case Platform::TypeCode::UInt16:
       case Platform::TypeCode::UInt32:
-        sqlite3_bind_int(statement, index, static_cast<int>(value));
+        result = sqlite3_bind_int(statement, index, static_cast<int>(value));
         break;
       case Platform::TypeCode::Int64:
       case Platform::TypeCode::UInt64:
-        sqlite3_bind_int64(statement, index, static_cast<int64>(value));
+        result = sqlite3_bind_int64(statement, index, static_cast<int64>(value));
         break;
       default: 
-        throw ref new Platform::InvalidArgumentException();
+        result = SQLITE_MISMATCH;
       }
+    }
+    if (result != SQLITE_OK) {
+      std::wostringstream message;
+      message << L"Could not bind parameter " << index << L" to " << value->ToString()->Data();
+      throwSQLiteError(result, ref new Platform::String(message.str().c_str()));
     }
   }
 
@@ -167,7 +173,7 @@ namespace SQLite3 {
     int ret = sqlite3_step(statement);
   
     if (ret != SQLITE_ROW && ret != SQLITE_DONE) {
-      throwSQLiteError(ret);
+      throwSQLiteError(ret, ref new Platform::String(L"Could not step statement"));
     }
 
     return ret;
