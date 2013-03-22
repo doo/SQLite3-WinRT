@@ -25,22 +25,13 @@ namespace SQLite3 {
     void BindParameter(int index, Platform::Object^ value);
     int BindParameterCount();
     std::wstring BindParameterName(int index);
-    int BindText(int index, Platform::String^ val);
-    int BindInt(int index, int64 val);
-    int BindDouble(int index, double val);
-    int BindNull(int index);
-
+    
     int Step();
     void GetRow(std::wostringstream& row);
-    Platform::Object^ GetColumn(int index);
-
+    
     int ColumnCount();
     int ColumnType(int index);
-    Platform::String^ ColumnName(int index);
-    Platform::String^ ColumnText(int index);
-    int64 ColumnInt(int index);
-    double ColumnDouble(int index);
-
+    
   private:
     HANDLE dbLockMutex;
     sqlite3_stmt* statement;
