@@ -13,7 +13,7 @@ namespace SQLite3 {
   
   public ref class Database sealed {
   public:
-    static Database^ Open(Platform::String^ dbPath);
+    static IAsyncOperation<Database^>^ OpenAsync(Platform::String^ dbPath);
 
     static property bool SharedCache {
       bool get() {
@@ -23,7 +23,7 @@ namespace SQLite3 {
       void set(bool value) {
         int ret = sqlite3_enable_shared_cache(value);
         if (ret != SQLITE_OK) {
-          throwSQLiteError(ret);
+          throwSQLiteError(ret, ref new Platform::String(L"Could not set shared cache"));
         }
       };
     }
@@ -43,7 +43,7 @@ namespace SQLite3 {
     
     property Platform::String^ LastError {
       Platform::String^ get() {
-        return ref new Platform::String(lastErrorMsg.c_str());
+        return ref new Platform::String(lastErrorMessage.c_str());
       };
     }
 
@@ -136,7 +136,9 @@ namespace SQLite3 {
     Platform::String^ collationLanguage;
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
-    std::wstring lastErrorMsg;
+    std::wstring lastErrorMessage;
+
+    void saveLastErrorMessage();
 
     event ChangeHandler^ _Insert;
     int insertChangeHandlers;

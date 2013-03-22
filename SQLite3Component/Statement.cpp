@@ -6,6 +6,9 @@
 #include <ppl.h>
 #include <ppltasks.h>
 
+#include <windows.storage.h>
+#include <robuffer.h>
+
 #include "Statement.h"
 #include "Database.h"
 
@@ -16,7 +19,7 @@ namespace SQLite3 {
 
     if (ret != SQLITE_OK) {
       sqlite3_finalize(statement);
-      throwSQLiteError(ret);
+      throwSQLiteError(ret, sql);
     }
 
     return StatementPtr(new Statement(statement));
@@ -56,22 +59,23 @@ namespace SQLite3 {
   }
 
   void Statement::BindParameter(int index, Platform::Object^ value) {
+    int result;
     if (value == nullptr) {
-      sqlite3_bind_null(statement, index);
+      result = sqlite3_bind_null(statement, index);
     } else {
       auto typeCode = Platform::Type::GetTypeCode(value->GetType());
       switch (typeCode) {
       case Platform::TypeCode::DateTime:
-        sqlite3_bind_int64(statement, index, FoundationTimeToUnixCompatible(static_cast<Windows::Foundation::DateTime>(value)));
+        result = sqlite3_bind_int64(statement, index, FoundationTimeToUnixCompatible(static_cast<Windows::Foundation::DateTime>(value)));
         break;
       case Platform::TypeCode::Double:
-        sqlite3_bind_double(statement, index, static_cast<double>(value));
+        result = sqlite3_bind_double(statement, index, static_cast<double>(value));
         break;
       case Platform::TypeCode::String:
-        sqlite3_bind_text16(statement, index, static_cast<Platform::String^>(value)->Data(), -1, SQLITE_TRANSIENT);
+        result = sqlite3_bind_text16(statement, index, static_cast<Platform::String^>(value)->Data(), -1, SQLITE_TRANSIENT);
         break;
       case Platform::TypeCode::Boolean:
-        sqlite3_bind_int(statement, index, static_cast<Platform::Boolean>(value) ? 1 : 0);
+        result = sqlite3_bind_int(statement, index, static_cast<Platform::Boolean>(value) ? 1 : 0);
         break;
       case Platform::TypeCode::Int8:
       case Platform::TypeCode::Int16:
@@ -79,15 +83,39 @@ namespace SQLite3 {
       case Platform::TypeCode::UInt8:
       case Platform::TypeCode::UInt16:
       case Platform::TypeCode::UInt32:
-        sqlite3_bind_int(statement, index, static_cast<int>(value));
+        result = sqlite3_bind_int(statement, index, static_cast<int>(value));
         break;
       case Platform::TypeCode::Int64:
       case Platform::TypeCode::UInt64:
-        sqlite3_bind_int64(statement, index, static_cast<int64>(value));
+        result = sqlite3_bind_int64(statement, index, static_cast<int64>(value));
         break;
-      default: 
-        throw ref new Platform::InvalidArgumentException();
+      case Platform::TypeCode::Object: {
+          auto buffer= winrt_as<ABI::Windows::Storage::Streams::IBuffer>(value);
+          if (buffer) {
+            auto byteBuffer= winrt_as<Windows::Storage::Streams::IBufferByteAccess>(value);
+            byte* blob;
+            byteBuffer->Buffer(&blob);
+            uint32 length;
+            buffer->get_Length(&length);
+            result = sqlite3_bind_blob(statement, index, blob, length, 0);
+          } else {
+            result = SQLITE_MISMATCH;
+          }
+        }
+        break;
+      default:
+        result = SQLITE_MISMATCH;      
       }
+    }
+    if (result != SQLITE_OK) {
+      std::wostringstream message;
+      message << L"Could not bind parameter " 
+              << index 
+              << L" to " 
+              << value->ToString()->Data() 
+              << L" because it has a wrong type " 
+              << value->GetType()->FullName->Data();
+      throwSQLiteError(result, ref new Platform::String(message.str().c_str()));
     }
   }
 
@@ -97,22 +125,6 @@ namespace SQLite3 {
 
   std::wstring Statement::BindParameterName(int index) {
     return ToWString(sqlite3_bind_parameter_name(statement, index));
-  }
-
-  int Statement::BindText(int index, Platform::String^ val) {
-    return sqlite3_bind_text16(statement, index, val->Data(), -1, SQLITE_TRANSIENT);
-  }
-
-  int Statement::BindInt(int index, int64 val) {
-    return sqlite3_bind_int64(statement, index, val);
-  }
-
-  int Statement::BindDouble(int index, double val) {
-    return sqlite3_bind_double(statement, index, val);
-  }
-
-  int Statement::BindNull(int index) {
-    return sqlite3_bind_null(statement, index);
   }
 
   void Statement::Run() {
@@ -167,7 +179,7 @@ namespace SQLite3 {
     int ret = sqlite3_step(statement);
   
     if (ret != SQLITE_ROW && ret != SQLITE_DONE) {
-      throwSQLiteError(ret);
+      throwSQLiteError(ret, ref new Platform::String(L"Could not step statement"));
     }
 
     return ret;
@@ -206,16 +218,28 @@ namespace SQLite3 {
     int columnCount = ColumnCount();
     for (int i = 0; i < columnCount; ++i) {
       auto colName = static_cast<const wchar_t*>(sqlite3_column_name16(statement, i));
-      auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));
-      auto colType = ColumnType(i);
+      auto colType = ColumnType(i);      
       outstream << L'"' << colName  << L"\":";
       switch (colType) {
-      case SQLITE_TEXT:
-        writeEscaped(colValue, outstream);
+      case SQLITE_TEXT: {
+          auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));      
+          writeEscaped(colValue, outstream);
+        }
         break;
       case SQLITE_INTEGER:
-      case SQLITE_FLOAT:
-        outstream << colValue;
+      case SQLITE_FLOAT: {
+          auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));      
+          outstream << colValue;
+        }
+        break;
+      case SQLITE_BLOB: {
+          auto blob = (byte*)sqlite3_column_blob(statement, i);
+          const int blobSize = sqlite3_column_bytes(statement, i);
+          Platform::ArrayReference<uint8> blobArray(blob, blobSize);
+          using Windows::Security::Cryptography::CryptographicBuffer;
+          auto base64Text = CryptographicBuffer::EncodeToBase64String(CryptographicBuffer::CreateFromByteArray(blobArray));    
+          outstream << L'"' << base64Text->Data() << L'"';
+        }
         break;
       case SQLITE_NULL:
         outstream << L"null";
@@ -228,42 +252,11 @@ namespace SQLite3 {
     outstream << L'}';
   }
 
-  Platform::Object^ Statement::GetColumn(int index) {
-    switch (ColumnType(index)) {
-    case SQLITE_INTEGER:
-      return ColumnInt(index);
-    case SQLITE_FLOAT:
-      return ColumnDouble(index);
-    case SQLITE_TEXT:
-      return ColumnText(index);
-    case SQLITE_NULL:
-      return nullptr;
-    default:
-      throw ref new Platform::FailureException();
-    }
-  }
-
   int Statement::ColumnCount() {
     return sqlite3_column_count(statement);
   }
 
   int Statement::ColumnType(int index) {
     return sqlite3_column_type(statement, index);
-  }
-
-  Platform::String^ Statement::ColumnName(int index) {
-    return ref new Platform::String(static_cast<const wchar_t*>(sqlite3_column_name16(statement, index)));
-  }
-
-  Platform::String^ Statement::ColumnText(int index) {
-    return ref new Platform::String(static_cast<const wchar_t*>(sqlite3_column_text16(statement, index)));
-  }
-
-  int64 Statement::ColumnInt(int index) {
-    return sqlite3_column_int64(statement, index);
-  }
-
-  double Statement::ColumnDouble(int index) {
-    return sqlite3_column_double(statement, index);
   }
 }

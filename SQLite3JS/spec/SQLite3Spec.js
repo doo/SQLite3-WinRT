@@ -1,40 +1,14 @@
-﻿(function () {
+﻿/// <reference path="/js/SQLite3.js" />
+(function () {
   "use strict";
 
+  spec.require("js/SQlite3.js");
+
   describe('SQLite3JS', function () {
-    function notNull(object) {
-      return object !== null;
-    }
-
-    function errorMessage(error) {
-      return error.message;
-    }
-
-    function waitsForPromise(promise) {
-      var done = false;
-
-      promise.then(function () {
-        done = true;
-      }, function (error) {
-        var message;
-
-        if (error.constructor === Array) {
-          message = error.filter(notNull).map(errorMessage).join(', ');
-        } else {
-          message = errorMessage(error);
-        }
-
-        jasmine.getEnv().currentSpec.fail(message);
-        done = true;
-      });
-
-      waitsFor(function () { return done; });
-    }
-
     var db = null;
 
     beforeEach(function () {
-      waitsForPromise(
+      spec.async(
         SQLite3JS.openAsync(':memory:').then(function (newDb) {
           db = newDb;
           return db.runAsync('CREATE TABLE Item (name TEXT, price REAL, dateBought UNSIGNED BIG INT, id INT PRIMARY KEY)').then(function () {
@@ -50,9 +24,10 @@
     });
 
     afterEach(function () {
-      waitsForPromise(
+      spec.async(
         db.runAsync('DROP TABLE Item').then(function () {
           db.close();
+          db = null;
         })
       );
     });
@@ -61,7 +36,7 @@
       it('should allow binding null arguments', function () {
         var name = 'Mango';
 
-        waitsForPromise(
+        spec.async(
           db.runAsync('INSERT INTO Item (name, price, id) VALUES (?, ?, ?)', [name, null, null])
           .then(function () {
             return db.oneAsync('SELECT * FROM Item WHERE name = ?', [name]);
@@ -77,7 +52,7 @@
         var name = 'Melon',
             dateBought = new Date();
 
-        waitsForPromise(
+        spec.async(
           db.runAsync('INSERT INTO Item (name, dateBought) VALUES (?, ?)', [name, dateBought])
           .then(function () {
             return db.oneAsync('SELECT * FROM Item WHERE dateBought=?', [dateBought]);
@@ -89,7 +64,7 @@
       });
 
       it('should allow binding arguments by name', function () {
-        waitsForPromise(
+        spec.async(
           db.runAsync(
             'INSERT INTO Item (name, price, id) VALUES (:name, :price, :id)',
             { name: 'Papaya', price: 5.2, id: 4 })
@@ -104,7 +79,7 @@
       });
 
       it('should return the number of affected rows', function () {
-        waitsForPromise(
+        spec.async(
           db.runAsync('DELETE FROM Item')
           .then(function (affectedRows) {
             expect(affectedRows).toEqual(3);
@@ -115,7 +90,7 @@
 
     describe('oneAsync()', function () {
       it('should return the correct count', function () {
-        waitsForPromise(
+        spec.async(
           db.oneAsync('SELECT COUNT(*) AS count FROM Item').then(function (row) {
             expect(row.count).toEqual(3);
           })
@@ -123,7 +98,7 @@
       });
 
       it('should return an item by id', function () {
-        waitsForPromise(
+        spec.async(
           db.oneAsync('SELECT * FROM Item WHERE id = ?', [2]).then(function (row) {
             expect(row.name).toEqual('Orange');
             expect(row.price).toEqual(2.5);
@@ -133,7 +108,7 @@
       });
 
       it('should return null for empty queries', function () {
-        waitsForPromise(
+        spec.async(
           db.oneAsync('SELECT * FROM Item WHERE name = ?', ['BEEF']).then(function (row) {
             expect(row).toBeNull();
           })
@@ -144,7 +119,7 @@
         var rowToInsert = {
           name: "Foo\nBar'n"
         };
-        waitsForPromise(
+        spec.async(
           db.runAsync('INSERT INTO Item(name) VALUES(:name)', rowToInsert)
           .then(function () {
             var id = db.lastInsertRowId;
@@ -158,7 +133,7 @@
 
     describe('allAsync()', function () {
       it('should return items with names ending on "e"', function () {
-        waitsForPromise(
+        spec.async(
           db.allAsync(
             'SELECT * FROM Item WHERE name LIKE :pattern ORDER BY id ASC',
             { pattern: '%e' })
@@ -171,14 +146,14 @@
       });
 
       it('should return empty array for empty queries', function () {
-        waitsForPromise(
+        spec.async(
           db.allAsync('SELECT * FROM Item WHERE id < ?', [0]).then(function (rows) {
             expect(rows.length).toEqual(0);
           })
         );
       });
 
-    xit('should allow cancellation', function () {
+    it('should allow cancellation', function () {
       var promise, thisSpec = this;
 
         promise = db.allAsync('SELECT * FROM Item ORDER BY id').then(function () {
@@ -189,7 +164,7 @@
 
         promise.cancel();
 
-        waitsForPromise(promise);
+        spec.async(promise);
       });
     });
 
@@ -202,7 +177,7 @@
       });
 
       it('should call a callback for each row', function () {
-        waitsForPromise(
+        spec.async(
           db.eachAsync('SELECT * FROM Item ORDER BY id', this.rememberId).then(function () {
             expect(ids).toEqual([1, 2, 3]);
           })
@@ -210,7 +185,7 @@
       });
 
       it('should allow binding arguments', function () {
-        waitsForPromise(
+        spec.async(
           db.eachAsync('SELECT * FROM Item WHERE price > ? ORDER BY id', [2], this.rememberId)
           .then(function () {
             expect(ids).toEqual([2, 3]);
@@ -219,7 +194,7 @@
       });
 
       it('should allow binding arguments by name', function () {
-        waitsForPromise(
+        spec.async(
           db.eachAsync(
             'SELECT * FROM Item WHERE price < :max ORDER BY id',
             { max: 3 },
@@ -242,13 +217,13 @@
           expect(error.message).toEqual('Canceled');
         });
 
-        waitsForPromise(promise);
+        spec.async(promise);
       });
     });
 
     describe('mapAsync()', function () {
       it('should map a function over all rows', function () {
-        waitsForPromise(
+        spec.async(
           db.mapAsync('SELECT * FROM Item ORDER BY id', function (row) {
             return row.price > 2 ? 'expensive' : 'cheap';
           }).then(function (rating) {
@@ -263,7 +238,7 @@
 
     describe('lastInsertRowId', function () {
       it('should retrieve the id of the last inserted row', function () {
-        waitsForPromise(
+        spec.async(
           db.runAsync("INSERT INTO Item (name) VALUES (?)", ['Ananas']).then(function () {
             var id = db.lastInsertRowId;
             expect(id).toEqual(4);
@@ -274,7 +249,7 @@
 
     describe("Sorting", function () {
       beforeEach(function () {
-        waitsForPromise(
+        spec.async(
           db.runAsync("CREATE TABLE SortTest (name TEXT COLLATE WINLOCALE)").then(function () {
             return db.runAsync("INSERT INTO SortTest VALUES (?)", ["Foo20"]);
           }).then(function () {
@@ -286,13 +261,13 @@
       });
 
       afterEach(function () {
-        waitsForPromise(
+        spec.async(
           db.runAsync("DROP TABLE SortTest")
         );
       });
 
       it("should order numbers according to value", function () {
-        waitsForPromise(
+        spec.async(
           db.allAsync("SELECT * FROM SortTest ORDER BY name").then(function (rows) {
             expect(rows[0].name).toEqual("Foo");
             expect(rows[1].name).toEqual("Foo3");
@@ -305,7 +280,7 @@
     });
     describe("Locale-specific Collation", function () {
       beforeEach(function () {
-        waitsForPromise(
+        spec.async(
           db.runAsync("CREATE TABLE CollateTest (name TEXT COLLATE WINLOCALE)").then(function () {
             return db.runAsync("INSERT INTO CollateTest VALUES (?)", ["Lj"]);
           }).then(function () {
@@ -317,14 +292,14 @@
       });
 
       afterEach(function () {
-        waitsForPromise(
+        spec.async(
           db.runAsync("DROP TABLE CollateTest")
         );
       });
 
       it('should support english collation', function () {
         db.collationLanguage = "en-US";
-        waitsForPromise(
+        spec.async(
           db.allAsync("SELECT * FROM CollateTest ORDER BY name").then(function (rows) {
             expect(rows[0].name).toEqual("La");
             expect(rows[1].name).toEqual("Lj");
@@ -335,7 +310,7 @@
 
       it('should support bosnian collation', function () {
         db.collationLanguage = "bs-Latn-BA";
-        waitsForPromise(
+        spec.async(
           db.allAsync("SELECT * FROM CollateTest ORDER BY name").then(function (rows) {
             expect(rows[0].name).toEqual("La");
             expect(rows[1].name).toEqual("Lz");
@@ -346,7 +321,7 @@
     });
 
     it("should support the REGEXP operator", function () {
-      waitsForPromise(
+      spec.async(
         db.allAsync("SELECT * FROM Item WHERE name REGEXP '.*a'").then(function (rows) {
           expect(rows.length).toEqual(2);
         })
@@ -355,14 +330,14 @@
 
     describe("Win8 app translation", function () {
       it("should translate from database queries using default resource", function () {
-        waitsForPromise(
+        spec.async(
           db.oneAsync("SELECT APPTRANSLATE(?) AS translation", ["testString1"]).then(function (row) {
             expect(row.translation).toEqual("Hello World!");
           })
         );
       });
       it("should translate from database queries using specific resource", function () {
-        waitsForPromise(
+        spec.async(
           db.oneAsync("SELECT APPTRANSLATE(?,?) AS translation", ["secondary", "testString1"]).then(function (row) {
             expect(row.translation).toEqual("Goodbye World.");
           })
@@ -426,7 +401,7 @@
 
         SQLite3.Database.sharedCache = true;
 
-        waitsForPromise(
+        spec.async(
           SQLite3JS.openAsync(dbFilename)
           .then(function (newDb) {
             db1 = newDb;
@@ -461,11 +436,11 @@
       it('should throw when creating an invalid database', function () {
         var thisSpec = this;
 
-        waitsForPromise(
+        spec.async(
           SQLite3JS.openAsync('invalid path').then(function (db) {
             thisSpec.fail('The error handler was not called.');
           }, function (error) {
-            expect(error.resultCode).toEqual(SQLite3.ResultCode.cantOpen);
+            expect(error.number & 0x0000ffff).toEqual(2);
           })
         );
       });
@@ -473,22 +448,80 @@
       it('should throw when executing an invalid statement', function () {
         var thisSpec = this;
 
-        waitsForPromise(
+        spec.async(
           db.runAsync('invalid sql').then(function () {
             thisSpec.fail('The error handler was not called.');
           }, function (error) {
-            expect(error.resultCode).toEqual(SQLite3.ResultCode.error);
-          })
-        );
-      });
-
-      it('should report the error of the last statement', function () {
-        waitsForPromise(
-          db.runAsync('invalid sql').then(null, function (err) {
+            expect(error.number).toEqual(0x80004005/*E_FAIL*/);
             expect(db.lastError).toEqual('near \"invalid\": syntax error');
           })
         );
       });
+
+      it('should fail on invalid bindings', function () {
+        var thisSpec = this;
+
+        spec.async(
+          db.runAsync('SELECT * FROM Item WHERE name=?', [["Array"]]).then(function () {
+            thisSpec.fail('The error handler was not called.');
+          }, function (error) {
+            expect(error.number & 0x0000ffff).toEqual(1629/*ERROR_DATATYPE_MISMATCH*/);
+          })
+        );
+      });
+    });
+
+    describe("Blobs", function () {
+      var CryptographicBuffer = Windows.Security.Cryptography.CryptographicBuffer;
+
+      beforeEach(function () {
+        spec.async(
+          db.runAsync("CREATE TABLE images(title TEXT, img BLOB)")
+        );
+      });
+
+      afterEach(function () {
+        spec.async(db.runAsync("DROP TABLE images"));
+      });
+
+      it("should not allow other object types than buffers to be inserted", function () {
+        var thisSpec = this;
+        spec.async(
+          Windows.ApplicationModel.Package.current.installedLocation.getFileAsync("images\\logo.png")
+          .then(function gotFile(file) {
+            return db.runAsync("INSERT INTO images(title, img) VALUES (?, ?)", ["a title", file]);
+          }).then(function shouldNotComplete() {
+            thisSpec.fail('Wooot? The error handler was not called.');
+          }, function shouldError(error) {
+            expect(error.number).toEqual(0x8007065D/*ERROR_DATATYPE_MISMATCH*/);
+          })
+        );
+      });
+
+      it("should allow buffers to be inserted as blobs", function () {
+        var originalBuffer;
+        spec.async(
+          Windows.ApplicationModel.Package.current.installedLocation.getFileAsync("images\\logo.png")
+          .then(function gotFile(file) {
+            return Windows.Storage.FileIO.readBufferAsync(file)
+            .then(function readContent(buffer) {
+              return (originalBuffer = buffer);
+            });
+          }).then(function readBuffer(buffer) {
+            return db.runAsync("INSERT INTO images(title, img) VALUES (?, ?)", ["a title", buffer]);
+          }).then(function inserted(count) {
+            return db.oneAsync("SELECT img FROM images WHERE title='a title'");
+          }).then(function selected(row) {
+            var div, selectedBuffer = CryptographicBuffer.decodeFromBase64String(row.img);
+            expect(CryptographicBuffer.compare(originalBuffer, selectedBuffer)).toBeTruthy();
+            // For visual confirmation that everything went ok, display the image on the page
+            div = document.createElement("img");
+            div.src = 'data:image/png;base64,' + row.img;
+            document.body.appendChild(div);
+          })
+        );
+      });
+      
     });
 
     describe('Item Data Source', function () {
@@ -497,7 +530,7 @@
       });
 
       it('should support getCount()', function () {
-        waitsForPromise(
+        spec.async(
           this.itemDataSource.getCount().then(function (count) {
             expect(count).toEqual(3);
           })
@@ -505,7 +538,7 @@
       });
 
       it('should support itemFromIndex()', function () {
-        waitsForPromise(
+        spec.async(
           this.itemDataSource.itemFromIndex(1).then(function (item) {
             expect(item.key).toEqual('2');
             expect(item.data.name).toEqual('Orange');
@@ -523,7 +556,7 @@
       });
 
       it('should support getCount()', function () {
-        waitsForPromise(
+        spec.async(
           this.groupDataSource.getCount().then(function (count) {
             expect(count).toEqual(2);
           })
@@ -531,7 +564,7 @@
       });
 
       it('should support itemFromIndex()', function () {
-        waitsForPromise(
+        spec.async(
           this.groupDataSource.itemFromIndex(1).then(function (item) {
             expect(item.key).toEqual('6');
             expect(item.groupSize).toEqual(2);
@@ -541,7 +574,7 @@
       });
 
       it('should support itemFromKey()', function () {
-        waitsForPromise(
+        spec.async(
           this.groupDataSource.itemFromKey('5').then(function (item) {
             expect(item.key).toEqual('5');
             expect(item.groupSize).toEqual(1);
