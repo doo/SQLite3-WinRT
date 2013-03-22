@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <wrl\client.h>
 #include "sqlite3.h"
 
 namespace SQLite3 {
@@ -22,4 +23,15 @@ namespace SQLite3 {
   void throwSQLiteError(int resultCode, Platform::String^ message = nullptr);
   std::wstring ToWString(const char* utf8String, unsigned int length = -1);
   Platform::String^ ToPlatformString(const char* utf8String, unsigned int length = -1);
+
+  template <typename To>
+  Microsoft::WRL::ComPtr<To> winrt_as(Platform::Object^ const from) {
+    Microsoft::WRL::ComPtr<To> to;
+    if (S_OK != (reinterpret_cast<IUnknown *>(from)->QueryInterface(to.GetAddressOf()))) {
+      return nullptr;
+    }
+    else {
+      return to;
+    }
+  }  
 }

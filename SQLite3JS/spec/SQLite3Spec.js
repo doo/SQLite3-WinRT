@@ -27,6 +27,7 @@
       spec.async(
         db.runAsync('DROP TABLE Item').then(function () {
           db.close();
+          db = null;
         })
       );
     });
@@ -468,6 +469,59 @@
           })
         );
       });
+    });
+
+    describe("Blobs", function () {
+      var CryptographicBuffer = Windows.Security.Cryptography.CryptographicBuffer;
+
+      beforeEach(function () {
+        spec.async(
+          db.runAsync("CREATE TABLE if not exists blobs(title TEXT, img BLOB)")
+        );
+      });
+
+      afterEach(function () {
+        spec.async(db.runAsync("DROP TABLE blobs"));
+      });
+
+      it("should not allow other object types than buffers to be inserted", function () {
+        var thisSpec = this;
+        spec.async(
+          Windows.ApplicationModel.Package.current.installedLocation.getFileAsync("images\\logo.png")
+          .then(function gotFile(file) {
+            return db.runAsync("INSERT INTO blobs(title, img) VALUES (?, ?)", ["a title", file]);
+          }).then(function shouldNotComplete() {
+            thisSpec.fail('Wooot? The error handler was not called.');
+          }, function shouldError(error) {
+            expect(error.number).toEqual(0x8007065D/*ERROR_DATATYPE_MISMATCH*/);
+          })
+        );
+      });
+
+      it("should allow buffers to be inserted as blobs", function () {
+        var originalBuffer;
+        spec.async(
+          Windows.ApplicationModel.Package.current.installedLocation.getFileAsync("images\\logo.png")
+          .then(function gotFile(file) {
+            return Windows.Storage.FileIO.readBufferAsync(file)
+            .then(function readContent(buffer) {
+              return (originalBuffer = buffer);
+            });
+          }).then(function readBuffer(buffer) {
+            return db.runAsync("INSERT INTO blobs(title, img) VALUES (?, ?)", ["a title", buffer]);
+          }).then(function inserted(count) {
+            return db.oneAsync("SELECT img FROM blobs WHERE title='a title'");
+          }).then(function selected(row) {
+            var div, selectedBuffer = CryptographicBuffer.decodeFromBase64String(row.img);
+            expect(CryptographicBuffer.compare(originalBuffer, selectedBuffer)).toBeTruthy();
+            // For visual confirmation that everything went ok, display the image on the page
+            div = document.createElement("img");
+            div.src = 'data:image/png;base64,' + row.img;
+            document.body.appendChild(div);
+          })
+        );
+      });
+      
     });
 
     describe('Item Data Source', function () {

@@ -6,6 +6,9 @@
 #include <ppl.h>
 #include <ppltasks.h>
 
+#include <windows.storage.h>
+#include <robuffer.h>
+
 #include "Statement.h"
 #include "Database.h"
 
@@ -86,13 +89,32 @@ namespace SQLite3 {
       case Platform::TypeCode::UInt64:
         result = sqlite3_bind_int64(statement, index, static_cast<int64>(value));
         break;
-      default: 
-        result = SQLITE_MISMATCH;
+      case Platform::TypeCode::Object: {
+          auto buffer= winrt_as<ABI::Windows::Storage::Streams::IBuffer>(value);
+          if (buffer) {
+            auto byteBuffer= winrt_as<Windows::Storage::Streams::IBufferByteAccess>(value);
+            byte* blob;
+            byteBuffer->Buffer(&blob);
+            uint32 length;
+            buffer->get_Length(&length);
+            result = sqlite3_bind_blob(statement, index, blob, length, 0);
+          } else {
+            result = SQLITE_MISMATCH;
+          }
+        }
+        break;
+      default:
+        result = SQLITE_MISMATCH;      
       }
     }
     if (result != SQLITE_OK) {
       std::wostringstream message;
-      message << L"Could not bind parameter " << index << L" to " << value->ToString()->Data();
+      message << L"Could not bind parameter " 
+              << index 
+              << L" to " 
+              << value->ToString()->Data() 
+              << L" because it has a wrong type " 
+              << value->GetType()->FullName->Data();
       throwSQLiteError(result, ref new Platform::String(message.str().c_str()));
     }
   }
@@ -196,16 +218,28 @@ namespace SQLite3 {
     int columnCount = ColumnCount();
     for (int i = 0; i < columnCount; ++i) {
       auto colName = static_cast<const wchar_t*>(sqlite3_column_name16(statement, i));
-      auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));
-      auto colType = ColumnType(i);
+      auto colType = ColumnType(i);      
       outstream << L'"' << colName  << L"\":";
       switch (colType) {
-      case SQLITE_TEXT:
-        writeEscaped(colValue, outstream);
+      case SQLITE_TEXT: {
+          auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));      
+          writeEscaped(colValue, outstream);
+        }
         break;
       case SQLITE_INTEGER:
-      case SQLITE_FLOAT:
-        outstream << colValue;
+      case SQLITE_FLOAT: {
+          auto colValue = static_cast<const wchar_t*>(sqlite3_column_text16(statement, i));      
+          outstream << colValue;
+        }
+        break;
+      case SQLITE_BLOB: {
+          auto blob = (byte*)sqlite3_column_blob(statement, i);
+          const int blobSize = sqlite3_column_bytes(statement, i);
+          Platform::ArrayReference<uint8> blobArray(blob, blobSize);
+          using Windows::Security::Cryptography::CryptographicBuffer;
+          auto base64Text = CryptographicBuffer::EncodeToBase64String(CryptographicBuffer::CreateFromByteArray(blobArray));    
+          outstream << L'"' << base64Text->Data() << L'"';
+        }
         break;
       case SQLITE_NULL:
         outstream << L"null";
