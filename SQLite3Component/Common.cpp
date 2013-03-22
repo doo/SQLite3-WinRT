@@ -34,6 +34,8 @@ namespace SQLite3 {
       hresult = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, resultCode);
       hresult |= 0x20000000; // Set "customer-defined" bit
     }
+    OutputDebugStringW(message->Data());
+    OutputDebugStringW(L"\n");
     throw ref new Platform::COMException(hresult, message);
   }
 

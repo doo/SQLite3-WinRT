@@ -43,7 +43,7 @@ namespace SQLite3 {
     
     property Platform::String^ LastError {
       Platform::String^ get() {
-        return ref new Platform::String(lastErrorMsg.c_str());
+        return ref new Platform::String(lastErrorMessage.c_str());
       };
     }
 
@@ -136,7 +136,9 @@ namespace SQLite3 {
     Platform::String^ collationLanguage;
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
-    std::wstring lastErrorMsg;
+    std::wstring lastErrorMessage;
+
+    void saveLastErrorMessage();
 
     event ChangeHandler^ _Insert;
     int insertChangeHandlers;

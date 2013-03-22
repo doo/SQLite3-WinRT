@@ -91,6 +91,11 @@ namespace SQLite3 {
   bool Database::sharedCache = false;
 
   IAsyncOperation<Database^>^ Database::OpenAsync(Platform::String^ dbPath) {
+    if (!dbPath->Length()) {
+      throw ref new Platform::COMException(E_INVALIDARG, L"You must specify a path or :memory:");
+    }
+
+    // Need to remember the current thread for later callbacks into JS
     CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
     
     return Concurrency::create_async([dbPath, dispatcher]() {
@@ -222,7 +227,7 @@ namespace SQLite3 {
         statement->Run();
         return sqlite3_changes(sqlite);
       } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+        saveLastErrorMessage();
         throw;
       }
     });
@@ -243,7 +248,7 @@ namespace SQLite3 {
         StatementPtr statement = PrepareAndBind(sql, params);
         return statement->One();
       } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+        saveLastErrorMessage();
         throw;
       }
     });
@@ -264,7 +269,7 @@ namespace SQLite3 {
         StatementPtr statement = PrepareAndBind(sql, params);
         return statement->All();
       } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+        saveLastErrorMessage();
         throw;
       }
     });
@@ -285,7 +290,7 @@ namespace SQLite3 {
         StatementPtr statement = PrepareAndBind(sql, params);
         statement->Each(callback, dispatcher);
       } catch (Platform::Exception^ e) {
-        lastErrorMsg = (WCHAR*)sqlite3_errmsg16(sqlite);
+        saveLastErrorMessage();
         throw;
       }
     });
@@ -296,5 +301,13 @@ namespace SQLite3 {
     StatementPtr statement = Statement::Prepare(sqlite, sql);
     statement->Bind(params);
     return statement;
+  }
+
+  void Database::saveLastErrorMessage() {
+    if (sqlite3_errcode(sqlite) != SQLITE_OK) {
+      lastErrorMessage = (WCHAR*)sqlite3_errmsg16(sqlite);
+    } else {
+      lastErrorMessage.clear();
+    }        
   }
 }
