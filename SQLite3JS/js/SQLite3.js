@@ -1,7 +1,7 @@
 ﻿(function () {
   "use strict";
 
-  var Database, ItemDataSource, GroupDataSource;
+  var ItemDataSource, GroupDataSource, MAX_CONNECTIONS = 5;
 
   function PromiseQueue() {
     this._items = [];
@@ -122,7 +122,41 @@
   }
 
   function wrapDatabase(connection) {
-    var that, queue = new PromiseQueue();
+    var that, queue = new PromiseQueue(), runningTransactions = 0, waitingTransactions = [];
+
+    function notifyTransactionComplete(connection, isSeparateConnection) {
+      if (isSeparateConnection) {
+        connection.close();
+        runningTransactions -= 1;
+      }
+      if (waitingTransactions.length > 0) {
+        var waitingTx = waitingTransactions.splice(0, 1);
+        setImmediate(waitingTx);
+      }
+    }
+
+    function getTransactionConnectionAsync(currentConnection, createNewConnection) {
+      if (createNewConnection) {
+        if (runningTransactions < MAX_CONNECTIONS) {
+          runningTransactions += 1;
+          return SQLite3JS.openAsync(currentConnection.path);
+        }
+        return new WinJS.Promise(function (complete) {
+          waitingTransactions.push(complete);
+        });
+      }
+      return WinJS.Promise.wrap(currentConnection);
+    }
+
+    function waitForTransactionAsync(callback) {
+      // if there are pending write operations or shared locks, commit may fail with SQLITE_BUSY
+      // check if another transaction may be the cause
+      if (runningTransactions > 1) {
+        return new WinJS.Promise(function (complete) { waitingTransactions.push(complete); });
+      }
+      // no other transactions, just wait for a bit and try again
+      return new WinJS.Promise.timeout(100);
+    }
 
     function callNativeAsync(funcName, sql, args, callback) {
       var argString, preparedArgs, fullFuncName;
@@ -210,6 +244,44 @@
       vacuumAsync: function () {
         return connection.vacuumAsync();
       },
+      withTransactionAsync: function (callback, useNewConnection, transactionMode) {
+        if (useNewConnection === undefined) {
+          useNewConnection = true;
+        } else if (useNewConnection === true && connection.path === ":memory:") {
+          useNewConnection = false;
+        }
+        if (transactionMode === undefined) {
+          transactionMode = SQLite3JS.TransactionMode.deferred;
+        }
+        return getTransactionConnectionAsync(that, useNewConnection)
+        .then(function (txConnection) {
+          return txConnection.runAsync("BEGIN " + transactionMode + " TRANSACTION")
+          .then(function () {
+            return WinJS.Promise.as(callback(txConnection));
+          })
+          .then(function finishUpTransaction(originalResult) {
+            return txConnection.runAsync("COMMIT TRANSACTION")
+            .then(function () {
+              notifyTransactionComplete(txConnection, useNewConnection);
+              if (originalResult !== that) {
+                return originalResult;
+              }
+            }, function (err) {
+              return waitForTransactionAsync()
+              .then(function () { finishUpTransaction(originalResult); });
+            });
+          }, function handleTxError(error) {
+            return txConnection.runAsync("ROLLBACK TRANSACTION")
+            .then(function () {
+              notifyTransactionComplete(txConnection, useNewConnection);
+              return WinJS.Promise.wrapError(error);
+            }, function (err) {
+              return waitForTransactionAsync()
+              .then(function () { handleTxError(error); });
+            });
+          });
+        });
+      },
       addEventListener: connection.addEventListener.bind(connection),
       removeEventListener: connection.removeEventListener.bind(connection)
     };
@@ -240,6 +312,10 @@
       },
       "lastInsertRowId": {
         get: function () { return connection.lastInsertRowId; },
+        enumerable: true
+      },
+      "path": {
+        get: function () { return connection.path; },
         enumerable: true
       }
     });
@@ -401,6 +477,24 @@
     });
   }
   
+  WinJS.Namespace.define("SQLite3JS.TransactionMode", {
+    deferred: {
+      get: function () {
+        return "DEFERRED";
+      }
+    },
+    immediate: {
+      get: function () {
+        return "IMMEDIATE";
+      }
+    },
+    exclusive: {
+      get: function () {
+        return "EXCLUSIVE";
+      }
+    }
+  });
+
   WinJS.Namespace.define("SQLite3JS", {
     openAsync: openAsync,
     /// Set this to true to get some more logging output

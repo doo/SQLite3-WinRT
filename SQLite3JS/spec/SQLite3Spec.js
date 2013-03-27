@@ -432,6 +432,70 @@
       });
     });
 
+    describe("Transaction support", function () {
+      var tempFolder = Windows.Storage.ApplicationData.current.temporaryFolder,
+          dbFilename = tempFolder.path + "\\transactionTest.sqlite",
+          mainConnection = null;
+
+      beforeEach(function () {
+        if (mainConnection !== null) {
+          return;
+        }
+        spec.async(
+          SQLite3JS.openAsync(dbFilename)
+          .then(function (newDb) {
+            mainConnection = newDb;
+            return mainConnection.runAsync("CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT)");
+          })
+        );
+      });
+
+      afterEach(function () {
+        spec.async(
+          mainConnection.runAsync("DELETE FROM TestData")
+        );
+      });
+
+      it("should automatically roll back on errors", function () {
+        var thisSpec = this;
+
+        spec.async(
+          mainConnection.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row1"])
+          .then(function () {
+            return mainConnection.withTransactionAsync(function (tx) {
+              return tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row2"])
+              .then(function () {
+                return tx.runAsync("BROKEN STATEMENT");
+              });
+            });
+          })
+          .then(function () {
+            thisSpec.fail("Error handler for failed transaction should have been called");
+          }, function () {
+            return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData")
+            .then(function (result) {
+              expect(result.rowCount).toEqual(1);
+            });
+          })
+        );
+      });
+
+      it("should automatically commit afterwards", function () {
+        spec.async(
+          mainConnection.withTransactionAsync(function (tx) {
+            return tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row1"])
+            .then(function () {
+              return tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row2"]);
+            });
+          }).then(function () {
+            return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
+          }).then(function (result) {
+            expect(result.rowCount).toEqual(2);
+          })
+        );
+      });
+    });
+
     describe('Error Handling', function () {
       it('should throw when creating an invalid database', function () {
         var thisSpec = this;
