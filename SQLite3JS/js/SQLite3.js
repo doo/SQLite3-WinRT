@@ -219,10 +219,7 @@
         connection.close();
       },
       vacuumAsync: function () {
-        return new WinJS.Promise( function(complete) {
-          connection.vacuumAsync();
-          complete();
-        });
+        return connection.vacuumAsync();
       },
       addEventListener: connection.addEventListener.bind(connection),
       removeEventListener: connection.removeEventListener.bind(connection)
