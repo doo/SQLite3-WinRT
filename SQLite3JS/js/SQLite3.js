@@ -1,18 +1,7 @@
-﻿var SQLite3JS = (function () {
+﻿(function () {
   "use strict";
 
-  var SQLite3JS, Database, ItemDataSource, GroupDataSource;
-
-  SQLite3JS = {
-    /// Set this to true to get some more logging output
-    debug: false,
-    logger: {
-      trace: console.log.bind(console),
-      warn: console.warn.bind(console),
-      error: console.error.bind(console),
-      info: console.info.bind(console)
-    }
-  };
+  var Database, ItemDataSource, GroupDataSource;
 
   function PromiseQueue() {
     this._items = [];
@@ -387,7 +376,7 @@
     }
   );
 
-  SQLite3JS.openAsync = function (dbPath) {
+  function openAsync(dbPath) {
     /// <summary>
     /// Opens a database from disk or in memory.
     /// </summary>
@@ -410,7 +399,18 @@
     }, function onerror(error) {
       return wrapException(error, 'Could not open database "' + dbPath + '"', "openAsync");
     });
-  };
+  }
   
-  return SQLite3JS;
+  WinJS.Namespace.define("SQLite3JS", {
+    openAsync: openAsync,
+    /// Set this to true to get some more logging output
+    debug: false,
+    logger: {
+      trace: console.log.bind(console),
+      warn: console.warn.bind(console),
+      error: console.error.bind(console),
+      info: console.info.bind(console)
+    }
+  });
+
 }());
