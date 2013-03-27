@@ -40,7 +40,8 @@ namespace SQLite3 {
     Windows::Foundation::IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
     Windows::Foundation::IAsyncAction^ VacuumAsync();
-    
+    void Close();
+
     property Platform::String^ LastError {
       Platform::String^ get() {
         return ref new Platform::String(lastErrorMessage.c_str());

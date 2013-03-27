@@ -132,7 +132,14 @@ namespace SQLite3 {
   }
 
   Database::~Database() {
-    sqlite3_close(sqlite);
+    Close();
+  }
+
+  void Database::Close() {
+    if (sqlite != NULL) {
+      sqlite3_close_v2(sqlite);
+      sqlite = NULL;
+    }
   }
 
   void Database::addChangeHandler(int& handlerCount) {
