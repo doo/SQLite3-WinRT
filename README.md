@@ -4,6 +4,15 @@ Async SQLite for (JavaScript) Windows Store apps.
 
 ## Changelog
 
+### 1.4.5
+
+#### Transaction support
+
+Starting with this version, the component finally has a simple transactions API. To allow for the best usage experience in the asynchronous WinJS environment, a new transaction will also open a new connection to the database, allowing you to continue working with the existing connection as usual.
+Call the `withTransaction` function on your existing database connection and pass it a callback function which receives a connection object and returns a promise. After the promise completes, the transaction will either be committed or - in case of an error - rolled back.
+As soon as a statement returns a locking-related error, that statement will be added to a queue and re-executed as soon as a running transaction is finished.
+Please note that if you have the database opened from an external process, it may cause indefinite blocking.
+
 ### 1.3.4
 
 #### Support for blobs
