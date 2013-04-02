@@ -277,7 +277,7 @@
       vacuumAsync: makeTransactionAware(function () {
         return connection.vacuumAsync();
       }),
-      withTransactionAsync: function (callback, useNewConnection, transactionMode) {
+      withTransactionAsync: function (callback, transactionMode, useNewConnection) {
         if (useNewConnection === undefined) {
           useNewConnection = true;
         } else if (useNewConnection === true && connection.path === ":memory:") {
