@@ -488,7 +488,7 @@
         );
       });
 
-      it("should wait for exclusive transactions", function () {
+      function runParallelTransactions(number) {
         function workInExclusiveTransaction(counter) {
           return mainConnection.withTransactionAsync(function (tx) {
             return WinJS.Promise.timeout(50) // artificially take some more time
@@ -502,7 +502,7 @@
           });
         }
         var transactionPromises = [], i = 0;
-        for (i = 0; i < 5; i += 1) {
+        for (i = 0; i < number; i += 1) {
           transactionPromises.push(workInExclusiveTransaction(i));
         }
         spec.async(
@@ -510,9 +510,17 @@
           .then(function () {
             return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
           }).then(function (result) {
-            expect(result.rowCount).toEqual(50);
+            expect(result.rowCount).toEqual(number*10);
           })
         );
+      }
+
+      it("should wait for exclusive transactions", function () {
+        runParallelTransactions(4);
+      });
+
+      it("should support a large number of concurrent transactions", function () {
+        runParallelTransactions(30);
       });
     });
 
