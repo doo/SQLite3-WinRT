@@ -1,7 +1,7 @@
 ﻿(function () {
   "use strict";
 
-  var ItemDataSource, GroupDataSource, MAX_CONNECTIONS = 5;
+  var ItemDataSource, GroupDataSource, MAX_CONNECTIONS = 5, transactionsByDbPath = {};
 
   function PromiseQueue() {
     this._items = [];
@@ -122,40 +122,65 @@
   }
 
   function wrapDatabase(connection) {
-    var that, queue = new PromiseQueue(), runningTransactions = 0, waitingTransactions = [];
+    var that, queue = new PromiseQueue();
+
+    // make a function resistant to SQLITE_LOCKED errors by waiting for running transactions
+    // and retrying after they have been processed
+    // if no other transactions are running, just waits a bit before retrying
+    function makeTransactionAware(mainAsyncFunction) {
+      return function transactionAware() {
+        var _that = this, args = arguments;
+        return mainAsyncFunction.apply(_that, args).then(null, function (error) {
+          if (error.number === 0x800700aa) {
+            if (transactionsByDbPath[connection.path].counter > 1) {        
+              // the database was busy, wait for some transaction to complete and then try again
+              return new WinJS.Promise(function (complete) {
+                transactionsByDbPath[connection.path].queue.push(function () {
+                  return complete(transactionAware.apply(_that, args));
+                });
+              });
+            }
+            return new WinJS.Promise.timeout(50).then(function () {
+              return transactionAware.apply(_that, args);
+            });
+          }
+          // all other errors should just be passed on as normal
+          return WinJS.Promise.wrapError(error);
+        });
+      };
+    }
 
     function notifyTransactionComplete(connection, isSeparateConnection) {
       if (isSeparateConnection) {
         connection.close();
-        runningTransactions -= 1;
+        transactionsByDbPath[connection.path].counter -= 1;
       }
-      if (waitingTransactions.length > 0) {
-        var waitingTx = waitingTransactions.splice(0, 1);
-        setImmediate(waitingTx);
+      if (transactionsByDbPath[connection.path].queue.length > 0) {
+        var waitingFunction = transactionsByDbPath[connection.path].queue.splice(0, 1);
+        setImmediate(waitingFunction);
       }
     }
 
     function getTransactionConnectionAsync(currentConnection, createNewConnection) {
       if (createNewConnection) {
-        if (runningTransactions < MAX_CONNECTIONS) {
-          runningTransactions += 1;
+        if (transactionsByDbPath[connection.path] === undefined) {
+          transactionsByDbPath[connection.path] = {
+            counter: 1,
+            queue: []
+          };
+          return SQLite3JS.openAsync(currentConnection.path);
+        }
+        if (transactionsByDbPath[connection.path].counter < MAX_CONNECTIONS) {
+          transactionsByDbPath[connection.path].counter += 1;
           return SQLite3JS.openAsync(currentConnection.path);
         }
         return new WinJS.Promise(function (complete) {
-          waitingTransactions.push(complete);
+          transactionsByDbPath[connection.path].queue.push(function () {
+            return getTransactionConnectionAsync(currentConnection, createNewConnection).then(complete);
+          });
         });
       }
       return WinJS.Promise.wrap(currentConnection);
-    }
-
-    function waitForTransactionAsync(callback) {
-      // if there are pending write operations or shared locks, commit may fail with SQLITE_BUSY
-      // check if another transaction may be the cause
-      if (runningTransactions > 1) {
-        return new WinJS.Promise(function (complete) { waitingTransactions.push(complete); });
-      }
-      // no other transactions, just wait for a bit and try again
-      return new WinJS.Promise.timeout(100);
     }
 
     function callNativeAsync(funcName, sql, args, callback) {
@@ -179,21 +204,21 @@
     }
 
     that = {
-      runAsync: function (sql, args) {
+      runAsync: makeTransactionAware( function (sql, args) {
         return callNativeAsync('runAsync', sql, args).then(function (affectedRowCount) {
           return affectedRowCount;
         });
-      },
-      oneAsync: function (sql, args) {
+      }),
+      oneAsync: makeTransactionAware(function (sql, args) {
         return callNativeAsync('oneAsync', sql, args).then(function (row) {
           return row ? JSON.parse(row) : null;
         });
-      },
-      allAsync: function (sql, args) {
+      }),
+      allAsync: makeTransactionAware(function (sql, args) {
         return callNativeAsync('allAsync', sql, args).then(function (rows) {
           return rows ? JSON.parse(rows) : null;
         });
-      },
+      }),
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
           callback = args;
@@ -241,9 +266,9 @@
       close: function () {
         connection.close();
       },
-      vacuumAsync: function () {
+      vacuumAsync: makeTransactionAware(function () {
         return connection.vacuumAsync();
-      },
+      }),
       withTransactionAsync: function (callback, useNewConnection, transactionMode) {
         if (useNewConnection === undefined) {
           useNewConnection = true;
@@ -259,25 +284,19 @@
           .then(function () {
             return WinJS.Promise.as(callback(txConnection));
           })
-          .then(function finishUpTransaction(originalResult) {
+          .then(function (originalResult) {
             return txConnection.runAsync("COMMIT TRANSACTION")
             .then(function () {
               notifyTransactionComplete(txConnection, useNewConnection);
               if (originalResult !== that) {
                 return originalResult;
               }
-            }, function (err) {
-              return waitForTransactionAsync()
-              .then(function () { finishUpTransaction(originalResult); });
             });
-          }, function handleTxError(error) {
+          }, function (error) {
             return txConnection.runAsync("ROLLBACK TRANSACTION")
             .then(function () {
               notifyTransactionComplete(txConnection, useNewConnection);
               return WinJS.Promise.wrapError(error);
-            }, function (err) {
-              return waitForTransactionAsync()
-              .then(function () { handleTxError(error); });
             });
           });
         });

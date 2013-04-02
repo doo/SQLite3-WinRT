@@ -438,21 +438,14 @@
           mainConnection = null;
 
       beforeEach(function () {
-        if (mainConnection !== null) {
-          return;
-        }
+        var connectionPromise = mainConnection ? WinJS.Promise.wrap(mainConnection) : SQLite3JS.openAsync(dbFilename);
         spec.async(
-          SQLite3JS.openAsync(dbFilename)
-          .then(function (newDb) {
+          connectionPromise.then(function (newDb) {
             mainConnection = newDb;
             return mainConnection.runAsync("CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT)");
+          }).then(function () {
+            return mainConnection.runAsync("DELETE FROM TestData");
           })
-        );
-      });
-
-      afterEach(function () {
-        spec.async(
-          mainConnection.runAsync("DELETE FROM TestData")
         );
       });
 
@@ -491,6 +484,33 @@
             return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
           }).then(function (result) {
             expect(result.rowCount).toEqual(2);
+          })
+        );
+      });
+
+      it("should wait for exclusive transactions", function () {
+        function workInExclusiveTransaction(counter) {
+          return mainConnection.withTransactionAsync(function (tx) {
+            return WinJS.Promise.timeout(50) // artificially take some more time
+            .then(function () {
+              var promises = [], i = 0;
+              for (i = 0; i < 10; i += 1) {
+                promises.push(tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row_" + counter + "_" + i]));
+              }
+              return WinJS.Promise.join(promises);
+            }, SQLite3JS.TransactionMode.exclusive);
+          });
+        }
+        var transactionPromises = [], i = 0;
+        for (i = 0; i < 5; i += 1) {
+          transactionPromises.push(workInExclusiveTransaction(i));
+        }
+        spec.async(
+          WinJS.Promise.join(transactionPromises)
+          .then(function () {
+            return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
+          }).then(function (result) {
+            expect(result.rowCount).toEqual(50);
           })
         );
       });
