@@ -124,6 +124,13 @@
   function wrapDatabase(connection) {
     var that, queue = new PromiseQueue();
 
+    function runNextWaitingCommand() {
+      if (transactionsByDbPath[connection.path].queue.length > 0) {
+        var waitingFunction = transactionsByDbPath[connection.path].queue.splice(0, 1)[0];
+        setImmediate(waitingFunction);
+      }
+    }
+
     // make a function resistant to SQLITE_LOCKED errors by waiting for running transactions
     // and retrying after they have been processed
     // if no other transactions are running, just waits a bit before retrying
@@ -131,7 +138,7 @@
       return function transactionAware() {
         var _that = this, args = arguments;
         return mainAsyncFunction.apply(_that, args).then(null, function (error) {
-          if (error.number === 0x800700aa) {
+          if (error.number === 0x800700aa || error.number === 0x80070021) { // they both indicate locking apparently
             if (transactionsByDbPath[connection.path].counter > 1) {        
               // the database was busy, wait for some transaction to complete and then try again
               return new WinJS.Promise(function (complete) {
@@ -152,13 +159,6 @@
           return WinJS.Promise.wrapError(error);
         });
       };
-    }
-
-    function runNextWaitingCommand() {
-      if (transactionsByDbPath[connection.path].queue.length > 0) {
-        var waitingFunction = transactionsByDbPath[connection.path].queue.splice(0, 1)[0];
-        setImmediate(waitingFunction);
-      }
     }
 
     function notifyTransactionComplete(connection, isSeparateConnection) {

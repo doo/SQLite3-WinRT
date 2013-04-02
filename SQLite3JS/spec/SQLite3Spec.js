@@ -24,12 +24,8 @@
     });
 
     afterEach(function () {
-      spec.async(
-        db.runAsync('DROP TABLE Item').then(function () {
-          db.close();
-          db = null;
-        })
-      );
+      db.close();
+      db = null;
     });
 
     describe('runAsync()', function () {
@@ -488,7 +484,7 @@
         );
       });
 
-      function runParallelTransactions(number) {
+      function runParallelTransactions(number, mode) {
         function workInExclusiveTransaction(counter) {
           return mainConnection.withTransactionAsync(function (tx) {
             return WinJS.Promise.timeout(50) // artificially take some more time
@@ -498,29 +494,43 @@
                 promises.push(tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row_" + counter + "_" + i]));
               }
               return WinJS.Promise.join(promises);
-            }, SQLite3JS.TransactionMode.exclusive);
+            }, mode);
           });
         }
         var transactionPromises = [], i = 0;
         for (i = 0; i < number; i += 1) {
           transactionPromises.push(workInExclusiveTransaction(i));
         }
-        spec.async(
-          WinJS.Promise.join(transactionPromises)
-          .then(function () {
-            return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
-          }).then(function (result) {
-            expect(result.rowCount).toEqual(number*10);
-          })
-        );
+        return WinJS.Promise.join(transactionPromises)
+        .then(function () {
+          return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
+        }).then(function (result) {
+          expect(result.rowCount).toEqual(number * 10);
+        });
       }
 
       it("should wait for exclusive transactions", function () {
-        runParallelTransactions(4);
+        spec.async(runParallelTransactions(4, SQLite3JS.TransactionMode.exclusive));
       });
 
       it("should support a large number of concurrent transactions", function () {
-        runParallelTransactions(30);
+        spec.async(runParallelTransactions(30, SQLite3JS.TransactionMode.exclusive));
+      });
+
+      it("should wait for deferred transactions", function () {
+        spec.async(runParallelTransactions(4, SQLite3JS.TransactionMode.deferred));
+      });
+
+      it("should support a large number of deferred transactions", function () {
+        spec.async(runParallelTransactions(30, SQLite3JS.TransactionMode.deferred));
+      });
+
+      it("should wait for immediate transactions", function () {
+        spec.async(runParallelTransactions(4, SQLite3JS.TransactionMode.immediate));
+      });
+
+      it("should support a large number of immediate transactions", function () {
+        spec.async(runParallelTransactions(30, SQLite3JS.TransactionMode.immediate));
       });
     });
 
