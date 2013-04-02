@@ -136,6 +136,10 @@
               // the database was busy, wait for some transaction to complete and then try again
               return new WinJS.Promise(function (complete) {
                 transactionsByDbPath[connection.path].queue.push(function () {
+                  // when a command that's waiting for a lock successfully completed, chances are that another one can 
+                  // be run afterwards, too. This tackles a problem where multiple statements are run on a database in 
+                  // parallel without chaining them
+                  runNextWaitingCommand();
                   return complete(transactionAware.apply(_that, args));
                 });
               });
@@ -150,15 +154,19 @@
       };
     }
 
+    function runNextWaitingCommand() {
+      if (transactionsByDbPath[connection.path].queue.length > 0) {
+        var waitingFunction = transactionsByDbPath[connection.path].queue.splice(0, 1)[0];
+        setImmediate(waitingFunction);
+      }
+    }
+
     function notifyTransactionComplete(connection, isSeparateConnection) {
       if (isSeparateConnection) {
         connection.close();
         transactionsByDbPath[connection.path].counter -= 1;
       }
-      if (transactionsByDbPath[connection.path].queue.length > 0) {
-        var waitingFunction = transactionsByDbPath[connection.path].queue.splice(0, 1);
-        setImmediate(waitingFunction);
-      }
+      runNextWaitingCommand();
     }
 
     function getTransactionConnectionAsync(currentConnection, createNewConnection) {
