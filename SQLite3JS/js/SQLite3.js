@@ -143,11 +143,11 @@
               // the database was busy, wait for some transaction to complete and then try again
               return new WinJS.Promise(function (complete) {
                 transactionsByDbPath[connection.path].queue.push(function () {
+                  complete(transactionAware.apply(_that, args));
                   // when a command that's waiting for a lock successfully completed, chances are that another one can 
                   // be run afterwards, too. This tackles a problem where multiple statements are run on a database in 
                   // parallel without chaining them
                   runNextWaitingCommand();
-                  return complete(transactionAware.apply(_that, args));
                 });
               });
             }
