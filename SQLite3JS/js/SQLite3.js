@@ -1,7 +1,7 @@
 ﻿(function () {
   "use strict";
 
-  var ItemDataSource, GroupDataSource, MAX_CONNECTIONS = 5, transactionsByDbPath = {};
+  var ItemDataSource, GroupDataSource, transactionsByDbPath = {};
 
   function PromiseQueue() {
     this._items = [];
@@ -148,7 +148,7 @@
           };
           return SQLite3JS.openAsync(currentConnection.path);
         }
-        if (transactionsByDbPath[connection.path].counter < MAX_CONNECTIONS) {
+        if (transactionsByDbPath[connection.path].counter < SQLite3JS.maxParallelTransactions) {
           transactionsByDbPath[connection.path].counter += 1;
           return SQLite3JS.openAsync(currentConnection.path);
         }
@@ -188,7 +188,7 @@
               //promise.done(runNextWaitingCommand);
               return promise;
             }
-            return new WinJS.Promise.timeout(50).then(workFunction);
+            return new WinJS.Promise.timeout(SQLite3JS.lockRetryTimeout).then(workFunction);
           }
           // all other errors should just be passed on as normal
           return WinJS.Promise.wrapError(error);
@@ -521,6 +521,11 @@
     openAsync: openAsync,
     /// Set this to true to get some more logging output
     debug: false,
+    // the maximum number of parallel connections for multiple transactions
+    maxParallelTransactions: 5,
+    // the timeout (in milliseconds) for retrying after a table or database lock was detected
+    // only used when there's no internal statement to wait for
+    lockRetryTimeout: 50,
     logger: {
       trace: console.log.bind(console),
       warn: console.warn.bind(console),
