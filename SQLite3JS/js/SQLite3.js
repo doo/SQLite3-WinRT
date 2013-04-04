@@ -88,7 +88,7 @@
     return '"' + sql + '", ' + argString;
   }
 
-  function wrapException(exception, detailedMessage, functionName, sql, args) {
+  function convertException(exception, detailedMessage, functionName, sql, args) {
     var error, message, resultCode, number;
 
     if (exception.hasOwnProperty('number')) {
@@ -118,47 +118,17 @@
       error = exception;
     }
 
-    return WinJS.Promise.wrapError(error);
+    return error;
   }
 
   function wrapDatabase(connection) {
     var that, queue = new PromiseQueue();
 
     function runNextWaitingCommand() {
-      if (transactionsByDbPath[connection.path].queue.length > 0) {
+      if (transactionsByDbPath[connection.path] && transactionsByDbPath[connection.path].queue.length > 0) {
         var waitingFunction = transactionsByDbPath[connection.path].queue.splice(0, 1)[0];
         setImmediate(waitingFunction);
       }
-    }
-
-    // make a function resistant to SQLITE_LOCKED errors by waiting for running transactions
-    // and retrying after they have been processed
-    // if no other transactions are running, just waits a bit before retrying
-    function makeTransactionAware(mainAsyncFunction) {
-      return function transactionAware() {
-        var _that = this, args = arguments;
-        return mainAsyncFunction.apply(_that, args).then(null, function (error) {
-          if (error.number === 0x800700aa || error.number === 0x80070021) { // they both indicate locking apparently
-            if (transactionsByDbPath[connection.path].counter > 1) {        
-              // the database was busy, wait for some transaction to complete and then try again
-              return new WinJS.Promise(function (complete) {
-                transactionsByDbPath[connection.path].queue.push(function () {
-                  complete(transactionAware.apply(_that, args));
-                  // when a command that's waiting for a lock successfully completed, chances are that another one can 
-                  // be run afterwards, too. This tackles a problem where multiple statements are run on a database in 
-                  // parallel without chaining them
-                  runNextWaitingCommand();
-                });
-              });
-            }
-            return new WinJS.Promise.timeout(50).then(function () {
-              return transactionAware.apply(_that, args);
-            });
-          }
-          // all other errors should just be passed on as normal
-          return WinJS.Promise.wrapError(error);
-        });
-      };
     }
 
     function notifyTransactionComplete(connection, isSeparateConnection) {
@@ -192,13 +162,12 @@
     }
 
     function callNativeAsync(funcName, sql, args, callback) {
-      var argString, preparedArgs, fullFuncName;
+      var argString, preparedArgs, fullFuncName, workFunction;
 
       if (SQLite3JS.debug) {
         SQLite3JS.logger.trace(funcName + ': ' + formatStatementAndArgs(sql, args));
       }
-
-      return queue.append(function () {
+      workFunction = function () {
         preparedArgs = prepareArgs(args);
         fullFuncName =
           preparedArgs instanceof Windows.Foundation.Collections.PropertySet
@@ -206,27 +175,45 @@
           : funcName + "Vector";
 
         return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
-          return wrapException(error, that.lastError, funcName, sql, args);
+          error = convertException(error);
+          if (error.number === 0x800700aa || error.number === 0x80070021) { // they both indicate locking apparently
+            if (transactionsByDbPath[connection.path].counter > 1) {
+              // the database was busy, wait for some transaction to complete and then try again
+              var promise = new WinJS.Promise(function (complete) {
+                transactionsByDbPath[connection.path].queue.push(function () {
+                  //complete(transactionAware.apply(_that, args));
+                  complete(workFunction());
+                });
+              });
+              //promise.done(runNextWaitingCommand);
+              return promise;
+            }
+            return new WinJS.Promise.timeout(50).then(workFunction);
+          }
+          // all other errors should just be passed on as normal
+          return WinJS.Promise.wrapError(error);
         });
-      });
+      };
+
+      return queue.append(workFunction);
     }
 
     that = {
-      runAsync: makeTransactionAware( function (sql, args) {
+      runAsync: function (sql, args) {
         return callNativeAsync('runAsync', sql, args).then(function (affectedRowCount) {
           return affectedRowCount;
         });
-      }),
-      oneAsync: makeTransactionAware(function (sql, args) {
+      },
+      oneAsync: function (sql, args) {
         return callNativeAsync('oneAsync', sql, args).then(function (row) {
           return row ? JSON.parse(row) : null;
         });
-      }),
-      allAsync: makeTransactionAware(function (sql, args) {
+      },
+      allAsync: function (sql, args) {
         return callNativeAsync('allAsync', sql, args).then(function (rows) {
           return rows ? JSON.parse(rows) : null;
         });
-      }),
+      },
       eachAsync: function (sql, args, callback) {
         if (!callback && typeof args === 'function') {
           callback = args;
@@ -274,10 +261,10 @@
       close: function () {
         connection.close();
       },
-      vacuumAsync: makeTransactionAware(function () {
+      vacuumAsync: function () {
         return connection.vacuumAsync();
-      }),
-      withTransactionAsync: function (callback, transactionMode, useNewConnection) {
+      },
+      withTransactionAsync: function (callback, transactionMode, useNewConnection, initializer) {
         if (useNewConnection === undefined) {
           useNewConnection = true;
         } else if (useNewConnection === true && connection.path === ":memory:") {
@@ -287,6 +274,14 @@
           transactionMode = SQLite3JS.TransactionMode.deferred;
         }
         return getTransactionConnectionAsync(that, useNewConnection)
+        .then(function (txConnection) {
+          if (initializer) {
+            return WinJS.Promise.as(initializer(txConnection)).then(function () {
+              return txConnection;
+            });
+          }
+          return txConnection;
+        })
         .then(function (txConnection) {
           return txConnection.runAsync("BEGIN " + transactionMode + " TRANSACTION")
           .then(function () {
@@ -500,7 +495,7 @@
         return db;
       });
     }, function onerror(error) {
-      return wrapException(error, 'Could not open database "' + dbPath + '"', "openAsync");
+      return WinJS.Promise.wrapError(convertException(error, 'Could not open database "' + dbPath + '"', "openAsync"));
     });
   }
   

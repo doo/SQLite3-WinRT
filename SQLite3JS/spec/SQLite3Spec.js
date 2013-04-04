@@ -433,16 +433,29 @@
           dbFilename = tempFolder.path + "\\transactionTest.sqlite",
           mainConnection = null;
 
+      SQLite3.Database.sharedCache = true;
+
       beforeEach(function () {
         var connectionPromise = mainConnection ? WinJS.Promise.wrap(mainConnection) : SQLite3JS.openAsync(dbFilename);
         spec.async(
           connectionPromise.then(function (newDb) {
             mainConnection = newDb;
+            return mainConnection.runAsync("PRAGMA journal_mode = WAL");
+          }).then(function () {
+            return mainConnection.runAsync("PRAGMA synchronous = 1");
+          }).then(function () {
+            return mainConnection.runAsync("PRAGMA read_uncommitted = 1");
+          }).then(function () {
             return mainConnection.runAsync("CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT)");
           }).then(function () {
             return mainConnection.runAsync("DELETE FROM TestData");
           })
         );
+      });
+
+      afterEach(function () {
+        mainConnection.close();
+        mainConnection = null;
       });
 
       it("should automatically roll back on errors", function () {
