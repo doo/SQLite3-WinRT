@@ -264,6 +264,23 @@
       vacuumAsync: function () {
         return connection.vacuumAsync();
       },
+      /// <summary>
+      /// Execute a function within a transaction.
+      /// </summary>
+      /// <param name="callback" type="Function">
+      /// A callback that is invoked with the database connection as its argument
+      /// </param>
+      /// <param name="transactionMode" type="String">
+      /// One of the values in SQLite3JS.TransactionMode. Defaults to SQLite3JS.TransactionMode.deferred.
+      /// </param>
+      /// <param name="useNewConnection" type="Boolean">
+      /// If set to true will skip creation of a separate connection and just use the current one.
+      /// </param>
+      /// <param name="initializer" type="Function">
+      /// This function will be called after establishing a new connection and before running BEGIN TRANSACTION on it.
+      /// You can use this callback to issue PRAGMA or other setup statements on it.
+      /// </param>
+      /// <returns>A promise that completes with the result of the callback</returns>
       withTransactionAsync: function (callback, transactionMode, useNewConnection, initializer) {
         if (useNewConnection === undefined) {
           useNewConnection = true;
