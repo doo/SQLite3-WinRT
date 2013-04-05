@@ -171,10 +171,11 @@
     function callNativeAsync(funcName, sql, args, callback) {
       var argString, preparedArgs, fullFuncName, workFunction;
 
-      if (SQLite3JS.debug) {
-        SQLite3JS.logger.trace(funcName + ': ' + formatStatementAndArgs(sql, args));
-      }
       workFunction = function () {
+        if (SQLite3JS.debug) {
+          SQLite3JS.logger.trace(funcName + ': ' + formatStatementAndArgs(sql, args));
+        }
+        
         preparedArgs = prepareArgs(args);
         fullFuncName =
           preparedArgs instanceof Windows.Foundation.Collections.PropertySet
