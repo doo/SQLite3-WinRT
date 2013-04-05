@@ -66,6 +66,13 @@
     }
   };
 
+  PromiseQueue.prototype.cancelAll = function () {
+    this._items = [];
+    if (this._promise) {
+      this._promise.cancel();
+    }
+  };
+
   function toPropertySet(object) {
     var key, propertySet = new Windows.Foundation.Collections.PropertySet();
 
@@ -259,6 +266,7 @@
         return new GroupDataSource(that, sql, args, keyColumnName, sizeColumnName);
       },
       close: function () {
+        queue.cancelAll();
         connection.close();
       },
       vacuumAsync: function () {
