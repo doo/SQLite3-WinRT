@@ -184,16 +184,20 @@
 
         return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
           error = convertException(error);
-          if (error.number === 0x800700aa || error.number === 0x80070021) { // they both indicate locking apparently
+          if (error.number === 0x800700aa || error.number === 0x80070021) { // different errors for table and database locks
             if (transactionsByDbPath[connection.path].counter > 1) {
               // the database was busy, wait for some transaction to complete and then try again
               var promise = new WinJS.Promise(function (complete) {
                 transactionsByDbPath[connection.path].queue.push(function () {
-                  //complete(transactionAware.apply(_that, args));
-                  complete(workFunction());
+                  var retryPromise = workFunction();
+                  // if connection is in autocommit mode, waiting for a COMMIT/ROLLBACK
+                  // to schedule the next waiting command doesn't work
+                  if (connection.autoCommit) {
+                    retryPromise.done(runNextWaitingCommand);
+                  }
+                  complete(retryPromise);
                 });
               });
-              //promise.done(runNextWaitingCommand);
               return promise;
             }
             return new WinJS.Promise.timeout(SQLite3JS.lockRetryTimeout).then(workFunction);
