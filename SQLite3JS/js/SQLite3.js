@@ -140,28 +140,54 @@
 
     function notifyTransactionComplete(connection, isSeparateConnection) {
       if (isSeparateConnection) {
-        connection.close();
-        transactionsByDbPath[connection.path].counter -= 1;
+        var closingPromise, connectionData = transactionsByDbPath[connection.path];
+        connectionData.counter -= 1;
+        closingPromise = WinJS.Promise.timeout(SQLite3JS.txConnectionTimeout).then(function () {
+          connection.close();
+          var i = connectionData.closingPromises.indexOf(closingPromise);
+          connectionData.closingPromises.splice(i, 1);
+        }, function (error) {
+          // if it has been canceled, increase the counter again
+          connectionData.counter += 1;
+          // don't need to remove the promise because it will be done by the one invoking cancel()
+        });
+        closingPromise.connection = connection;
+        connectionData.closingPromises.push(closingPromise);
       }
       runNextWaitingCommand();
     }
 
-    function getTransactionConnectionAsync(currentConnection, createNewConnection) {
+    function getTransactionConnectionAsync(currentConnection, createNewConnection, initializer) {
       if (createNewConnection) {
-        if (transactionsByDbPath[connection.path] === undefined) {
+        var connectionData = transactionsByDbPath[connection.path], closingPromise, connectionPromise;
+        if (connectionData === undefined) {
           transactionsByDbPath[connection.path] = {
             counter: 1,
-            queue: []
+            queue: [],
+            closingPromises: []
           };
           return SQLite3JS.openAsync(currentConnection.path);
         }
-        if (transactionsByDbPath[connection.path].counter < SQLite3JS.maxParallelTransactions) {
-          transactionsByDbPath[connection.path].counter += 1;
-          return SQLite3JS.openAsync(currentConnection.path);
+        if (connectionData.counter < SQLite3JS.maxParallelTransactions) {
+          if (connectionData.closingPromises.length > 0) {
+            closingPromise = connectionData.closingPromises.splice(0, 1)[0];
+            closingPromise.cancel();
+            return WinJS.Promise.wrap(closingPromise.connection);
+          }
+          connectionData.counter += 1;
+          connectionPromise = SQLite3JS.openAsync(currentConnection.path);
+          if (initializer) {
+            connectionPromise = connectionPromise.then(function (connection) {
+              return WinJS.Promise.as(initializer(connection)).then(function () {
+                return connection;
+              });
+            });
+          }
+          return connectionPromise;
         }
         return new WinJS.Promise(function (complete) {
-          transactionsByDbPath[connection.path].queue.push(function () {
-            return getTransactionConnectionAsync(currentConnection, createNewConnection).then(complete);
+          connectionData.queue.push(function () {
+            return getTransactionConnectionAsync(currentConnection, createNewConnection, initializer).then(complete);
           });
         });
       }
@@ -303,15 +329,7 @@
         if (transactionMode === undefined) {
           transactionMode = SQLite3JS.TransactionMode.deferred;
         }
-        return getTransactionConnectionAsync(that, useNewConnection)
-        .then(function (txConnection) {
-          if (initializer) {
-            return WinJS.Promise.as(initializer(txConnection)).then(function () {
-              return txConnection;
-            });
-          }
-          return txConnection;
-        })
+        return getTransactionConnectionAsync(that, useNewConnection, initializer)
         .then(function (txConnection) {
           return txConnection.runAsync("BEGIN " + transactionMode + " TRANSACTION")
           .then(function () {
@@ -556,6 +574,7 @@
     // the timeout (in milliseconds) for retrying after a table or database lock was detected
     // only used when there's no internal statement to wait for
     lockRetryTimeout: 50,
+    txConnectionTimeout: 3000,
     logger: {
       trace: console.log.bind(console),
       warn: console.warn.bind(console),
