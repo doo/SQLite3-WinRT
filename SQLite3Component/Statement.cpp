@@ -15,7 +15,7 @@
 namespace SQLite3 {
   StatementPtr Statement::Prepare(sqlite3* sqlite, Platform::String^ sql) {
     sqlite3_stmt* statement;
-    int ret = sqlite3_prepare16(sqlite, sql->Data(), -1, &statement, 0);
+    int ret = sqlite3_prepare16_v2(sqlite, sql->Data(), -1, &statement, 0);
 
     if (ret != SQLITE_OK) {
       sqlite3_finalize(statement);

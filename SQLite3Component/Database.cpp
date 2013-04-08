@@ -107,11 +107,11 @@ namespace SQLite3 {
         throwSQLiteError(ret, dbPath);
       }
 
-      return ref new Database(sqlite, dispatcher);
+      return ref new Database(dbPath, sqlite, dispatcher);
     });    
   }
 
-  Database::Database(sqlite3* sqlite, CoreDispatcher^ dispatcher)
+  Database::Database(Platform::String^ dbPath, sqlite3* sqlite, CoreDispatcher^ dispatcher)
     : collationLanguage(nullptr) // will use user locale
     , dispatcher(dispatcher)
     , fireEvents(true)
@@ -119,6 +119,7 @@ namespace SQLite3 {
     , insertChangeHandlers(0)
     , updateChangeHandlers(0)
     , deleteChangeHandlers(0)
+    , databasePath(dbPath)
     , sqlite(sqlite) {
       assert(sqlite);
       sqlite3_create_collation_v2(sqlite, "WINLOCALE", SQLITE_UTF16, reinterpret_cast<void*>(this), WinLocaleCollateUtf16, nullptr);
@@ -131,7 +132,14 @@ namespace SQLite3 {
   }
 
   Database::~Database() {
-    sqlite3_close(sqlite);
+    Close();
+  }
+
+  void Database::Close() {
+    if (sqlite != NULL) {
+      sqlite3_close_v2(sqlite);
+      sqlite = NULL;
+    }
   }
 
   void Database::addChangeHandler(int& handlerCount) {

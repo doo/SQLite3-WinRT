@@ -40,7 +40,8 @@ namespace SQLite3 {
     Windows::Foundation::IAsyncAction^ EachAsyncMap(Platform::String^ sql, ParameterMap^ params, EachCallback^ callback);
 
     Windows::Foundation::IAsyncAction^ VacuumAsync();
-    
+    void Close();
+
     property Platform::String^ LastError {
       Platform::String^ get() {
         return ref new Platform::String(lastErrorMessage.c_str());
@@ -113,9 +114,14 @@ namespace SQLite3 {
       };
     }
 
+    property Platform::String^ Path {
+      Platform::String^ get() {
+        return databasePath;
+      };
+    }
   private:
     static bool sharedCache;
-    Database(sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^ dispatcher);
+    Database(Platform::String^ dbPath, sqlite3* sqlite, Windows::UI::Core::CoreDispatcher^ dispatcher);
 
     template <typename ParameterContainer>
     StatementPtr PrepareAndBind(Platform::String^ sql, ParameterContainer params);
@@ -134,6 +140,7 @@ namespace SQLite3 {
 
     bool fireEvents;
     Platform::String^ collationLanguage;
+    Platform::String^ databasePath;
     Windows::UI::Core::CoreDispatcher^ dispatcher;
     sqlite3* sqlite;
     std::wstring lastErrorMessage;

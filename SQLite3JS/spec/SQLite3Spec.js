@@ -24,12 +24,8 @@
     });
 
     afterEach(function () {
-      spec.async(
-        db.runAsync('DROP TABLE Item').then(function () {
-          db.close();
-          db = null;
-        })
-      );
+      db.close();
+      db = null;
     });
 
     describe('runAsync()', function () {
@@ -429,6 +425,125 @@
             });
           })
         );
+      });
+    });
+
+    describe("Transaction support", function () {
+      var tempFolder = Windows.Storage.ApplicationData.current.temporaryFolder,
+          dbFilename = tempFolder.path + "\\transactionTest.sqlite",
+          mainConnection = null;
+
+      SQLite3.Database.sharedCache = true;
+
+      beforeEach(function () {
+        var connectionPromise = mainConnection ? WinJS.Promise.wrap(mainConnection) : SQLite3JS.openAsync(dbFilename);
+        spec.async(
+          connectionPromise.then(function (newDb) {
+            mainConnection = newDb;
+            return mainConnection.runAsync("PRAGMA journal_mode = WAL");
+          }).then(function () {
+            return mainConnection.runAsync("PRAGMA synchronous = 1");
+          }).then(function () {
+            return mainConnection.runAsync("PRAGMA read_uncommitted = 1");
+          }).then(function () {
+            return mainConnection.runAsync("CREATE TABLE IF NOT EXISTS TestData (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT)");
+          }).then(function () {
+            return mainConnection.runAsync("DELETE FROM TestData");
+          })
+        );
+      });
+
+      afterEach(function () {
+        mainConnection.close();
+        mainConnection = null;
+      });
+
+      it("should automatically roll back on errors", function () {
+        var thisSpec = this;
+
+        spec.async(
+          mainConnection.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row1"])
+          .then(function () {
+            return mainConnection.withTransactionAsync(function (tx) {
+              return tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row2"])
+              .then(function () {
+                return tx.runAsync("BROKEN STATEMENT");
+              });
+            });
+          })
+          .then(function () {
+            thisSpec.fail("Error handler for failed transaction should have been called");
+          }, function () {
+            return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData")
+            .then(function (result) {
+              expect(result.rowCount).toEqual(1);
+            });
+          })
+        );
+      });
+
+      it("should automatically commit afterwards", function () {
+        spec.async(
+          mainConnection.withTransactionAsync(function (tx) {
+            return tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row1"])
+            .then(function () {
+              return tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row2"]);
+            });
+          }).then(function () {
+            return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
+          }).then(function (result) {
+            expect(result.rowCount).toEqual(2);
+          })
+        );
+      });
+
+      function runParallelTransactions(number, mode) {
+        function workInExclusiveTransaction(counter) {
+          return mainConnection.withTransactionAsync(function (tx) {
+            return WinJS.Promise.timeout(50) // artificially take some more time
+            .then(function () {
+              var promises = [], i = 0;
+              for (i = 0; i < 10; i += 1) {
+                promises.push(tx.runAsync("INSERT INTO TestData(value) VALUES(?)", ["row_" + counter + "_" + i]));
+              }
+              return WinJS.Promise.join(promises);
+            }, mode);
+          });
+        }
+        var transactionPromises = [], i = 0;
+        for (i = 0; i < number; i += 1) {
+          transactionPromises.push(workInExclusiveTransaction(i));
+        }
+        return WinJS.Promise.join(transactionPromises)
+        .then(function () {
+          return mainConnection.oneAsync("SELECT COUNT(*) as rowCount FROM TestData");
+        }).then(function (result) {
+          expect(result.rowCount).toEqual(number * 10);
+        });
+      }
+
+      it("should wait for exclusive transactions", function () {
+        spec.async(runParallelTransactions(4, SQLite3JS.TransactionMode.exclusive));
+      });
+
+      it("should support a large number of concurrent transactions", function () {
+        spec.async(runParallelTransactions(30, SQLite3JS.TransactionMode.exclusive));
+      });
+
+      it("should wait for deferred transactions", function () {
+        spec.async(runParallelTransactions(4, SQLite3JS.TransactionMode.deferred));
+      });
+
+      it("should support a large number of deferred transactions", function () {
+        spec.async(runParallelTransactions(30, SQLite3JS.TransactionMode.deferred));
+      });
+
+      it("should wait for immediate transactions", function () {
+        spec.async(runParallelTransactions(4, SQLite3JS.TransactionMode.immediate));
+      });
+
+      it("should support a large number of immediate transactions", function () {
+        spec.async(runParallelTransactions(30, SQLite3JS.TransactionMode.immediate));
       });
     });
 

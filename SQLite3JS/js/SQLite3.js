@@ -1,18 +1,7 @@
-﻿var SQLite3JS = (function () {
+﻿(function () {
   "use strict";
 
-  var SQLite3JS, Database, ItemDataSource, GroupDataSource;
-
-  SQLite3JS = {
-    /// Set this to true to get some more logging output
-    debug: false,
-    logger: {
-      trace: console.log.bind(console),
-      warn: console.warn.bind(console),
-      error: console.error.bind(console),
-      info: console.info.bind(console)
-    }
-  };
+  var ItemDataSource, GroupDataSource, transactionsByDbPath = {};
 
   function PromiseQueue() {
     this._items = [];
@@ -77,6 +66,13 @@
     }
   };
 
+  PromiseQueue.prototype.cancelAll = function () {
+    this._items = [];
+    if (this._promise) {
+      this._promise.cancel();
+    }
+  };
+
   function toPropertySet(object) {
     var key, propertySet = new Windows.Foundation.Collections.PropertySet();
 
@@ -99,7 +95,7 @@
     return '"' + sql + '", ' + argString;
   }
 
-  function wrapException(exception, detailedMessage, functionName, sql, args) {
+  function convertException(exception, detailedMessage, functionName, sql, args) {
     var error, message, resultCode, number;
 
     if (exception.hasOwnProperty('number')) {
@@ -129,20 +125,83 @@
       error = exception;
     }
 
-    return WinJS.Promise.wrapError(error);
+    return error;
   }
 
   function wrapDatabase(connection) {
     var that, queue = new PromiseQueue();
 
-    function callNativeAsync(funcName, sql, args, callback) {
-      var argString, preparedArgs, fullFuncName;
-
-      if (SQLite3JS.debug) {
-        SQLite3JS.logger.trace(funcName + ': ' + formatStatementAndArgs(sql, args));
+    function runNextWaitingCommand() {
+      if (transactionsByDbPath[connection.path] && transactionsByDbPath[connection.path].queue.length > 0) {
+        var waitingFunction = transactionsByDbPath[connection.path].queue.splice(0, 1)[0];
+        setImmediate(waitingFunction);
       }
+    }
 
-      return queue.append(function () {
+    function notifyTransactionComplete(connection, isSeparateConnection) {
+      if (isSeparateConnection) {
+        var closingPromise, connectionData = transactionsByDbPath[connection.path];
+        connectionData.counter -= 1;
+        closingPromise = WinJS.Promise.timeout(SQLite3JS.txConnectionTimeout).then(function () {
+          connection.close();
+          var i = connectionData.closingPromises.indexOf(closingPromise);
+          connectionData.closingPromises.splice(i, 1);
+        }, function (error) {
+          // if it has been canceled, increase the counter again
+          connectionData.counter += 1;
+          // don't need to remove the promise because it will be done by the one invoking cancel()
+        });
+        closingPromise.connection = connection;
+        connectionData.closingPromises.push(closingPromise);
+      }
+      runNextWaitingCommand();
+    }
+
+    function getTransactionConnectionAsync(currentConnection, createNewConnection, initializer) {
+      if (createNewConnection) {
+        var connectionData = transactionsByDbPath[connection.path], closingPromise, connectionPromise;
+        if (connectionData === undefined) {
+          transactionsByDbPath[connection.path] = {
+            counter: 1,
+            queue: [],
+            closingPromises: []
+          };
+          return SQLite3JS.openAsync(currentConnection.path);
+        }
+        if (connectionData.counter < SQLite3JS.maxParallelTransactions) {
+          if (connectionData.closingPromises.length > 0) {
+            closingPromise = connectionData.closingPromises.splice(0, 1)[0];
+            closingPromise.cancel();
+            return WinJS.Promise.wrap(closingPromise.connection);
+          }
+          connectionData.counter += 1;
+          connectionPromise = SQLite3JS.openAsync(currentConnection.path);
+          if (initializer) {
+            connectionPromise = connectionPromise.then(function (connection) {
+              return WinJS.Promise.as(initializer(connection)).then(function () {
+                return connection;
+              });
+            });
+          }
+          return connectionPromise;
+        }
+        return new WinJS.Promise(function (complete) {
+          connectionData.queue.push(function () {
+            return getTransactionConnectionAsync(currentConnection, createNewConnection, initializer).then(complete);
+          });
+        });
+      }
+      return WinJS.Promise.wrap(currentConnection);
+    }
+
+    function callNativeAsync(funcName, sql, args, callback) {
+      var argString, preparedArgs, fullFuncName, workFunction;
+
+      workFunction = function () {
+        if (SQLite3JS.debug) {
+          SQLite3JS.logger.trace(funcName + ': ' + formatStatementAndArgs(sql, args));
+        }
+        
         preparedArgs = prepareArgs(args);
         fullFuncName =
           preparedArgs instanceof Windows.Foundation.Collections.PropertySet
@@ -150,9 +209,31 @@
           : funcName + "Vector";
 
         return connection[fullFuncName](sql, preparedArgs, callback).then(null, function (error) {
-          return wrapException(error, that.lastError, funcName, sql, args);
+          error = convertException(error);
+          if (error.number === 0x800700aa || error.number === 0x80070021) { // different errors for table and database locks
+            if (transactionsByDbPath[connection.path].counter > 1) {
+              // the database was busy, wait for some transaction to complete and then try again
+              var promise = new WinJS.Promise(function (complete) {
+                transactionsByDbPath[connection.path].queue.push(function () {
+                  var retryPromise = workFunction();
+                  // if connection is in autocommit mode, waiting for a COMMIT/ROLLBACK
+                  // to schedule the next waiting command doesn't work
+                  if (connection.autoCommit) {
+                    retryPromise.done(runNextWaitingCommand);
+                  }
+                  complete(retryPromise);
+                });
+              });
+              return promise;
+            }
+            return new WinJS.Promise.timeout(SQLite3JS.lockRetryTimeout).then(workFunction);
+          }
+          // all other errors should just be passed on as normal
+          return WinJS.Promise.wrapError(error);
         });
-      });
+      };
+
+      return queue.append(workFunction);
     }
 
     that = {
@@ -216,12 +297,59 @@
         return new GroupDataSource(that, sql, args, keyColumnName, sizeColumnName);
       },
       close: function () {
+        queue.cancelAll();
         connection.close();
       },
       vacuumAsync: function () {
-        return new WinJS.Promise( function(complete) {
-          connection.vacuumAsync();
-          complete();
+        return connection.vacuumAsync();
+      },
+      /// <summary>
+      /// Execute a function within a transaction.
+      /// </summary>
+      /// <param name="callback" type="Function">
+      /// A callback that is invoked with the database connection as its argument
+      /// </param>
+      /// <param name="transactionMode" type="String">
+      /// One of the values in SQLite3JS.TransactionMode. Defaults to SQLite3JS.TransactionMode.deferred.
+      /// </param>
+      /// <param name="useNewConnection" type="Boolean">
+      /// If set to true will skip creation of a separate connection and just use the current one.
+      /// </param>
+      /// <param name="initializer" type="Function">
+      /// This function will be called after establishing a new connection and before running BEGIN TRANSACTION on it.
+      /// You can use this callback to issue PRAGMA or other setup statements on it.
+      /// </param>
+      /// <returns>A promise that completes with the result of the callback</returns>
+      withTransactionAsync: function (callback, transactionMode, useNewConnection, initializer) {
+        if (useNewConnection === undefined) {
+          useNewConnection = true;
+        } else if (useNewConnection === true && connection.path === ":memory:") {
+          useNewConnection = false;
+        }
+        if (transactionMode === undefined) {
+          transactionMode = SQLite3JS.TransactionMode.deferred;
+        }
+        return getTransactionConnectionAsync(that, useNewConnection, initializer)
+        .then(function (txConnection) {
+          return txConnection.runAsync("BEGIN " + transactionMode + " TRANSACTION")
+          .then(function () {
+            return WinJS.Promise.as(callback(txConnection));
+          })
+          .then(function (originalResult) {
+            return txConnection.runAsync("COMMIT TRANSACTION")
+            .then(function () {
+              notifyTransactionComplete(txConnection, useNewConnection);
+              if (originalResult !== that) {
+                return originalResult;
+              }
+            });
+          }, function (error) {
+            return txConnection.runAsync("ROLLBACK TRANSACTION")
+            .then(function () {
+              notifyTransactionComplete(txConnection, useNewConnection);
+              return WinJS.Promise.wrapError(error);
+            });
+          });
         });
       },
       addEventListener: connection.addEventListener.bind(connection),
@@ -254,6 +382,10 @@
       },
       "lastInsertRowId": {
         get: function () { return connection.lastInsertRowId; },
+        enumerable: true
+      },
+      "path": {
+        get: function () { return connection.path; },
         enumerable: true
       }
     });
@@ -390,7 +522,7 @@
     }
   );
 
-  SQLite3JS.openAsync = function (dbPath) {
+  function openAsync(dbPath) {
     /// <summary>
     /// Opens a database from disk or in memory.
     /// </summary>
@@ -411,9 +543,44 @@
         return db;
       });
     }, function onerror(error) {
-      return wrapException(error, 'Could not open database "' + dbPath + '"', "openAsync");
+      return WinJS.Promise.wrapError(convertException(error, 'Could not open database "' + dbPath + '"', "openAsync"));
     });
-  };
+  }
   
-  return SQLite3JS;
+  WinJS.Namespace.define("SQLite3JS.TransactionMode", {
+    deferred: {
+      get: function () {
+        return "DEFERRED";
+      }
+    },
+    immediate: {
+      get: function () {
+        return "IMMEDIATE";
+      }
+    },
+    exclusive: {
+      get: function () {
+        return "EXCLUSIVE";
+      }
+    }
+  });
+
+  WinJS.Namespace.define("SQLite3JS", {
+    openAsync: openAsync,
+    /// Set this to true to get some more logging output
+    debug: false,
+    // the maximum number of parallel connections for multiple transactions
+    maxParallelTransactions: 5,
+    // the timeout (in milliseconds) for retrying after a table or database lock was detected
+    // only used when there's no internal statement to wait for
+    lockRetryTimeout: 50,
+    txConnectionTimeout: 3000,
+    logger: {
+      trace: console.log.bind(console),
+      warn: console.warn.bind(console),
+      error: console.error.bind(console),
+      info: console.info.bind(console)
+    }
+  });
+
 }());
