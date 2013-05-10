@@ -32,6 +32,12 @@
     <ClCompile Include="Database.cpp" />
     <ClCompile Include="sqlite3.c">
       <CompileAsWinRT>false</CompileAsWinRT>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">SQLITE_ENABLE_FTS4;SQLITE_OS_WINRT;SQLITE_ENABLE_UNLOCK_NOTIFY;SQLITE_TEMP_STORE=2;_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">SQLITE_ENABLE_FTS4;SQLITE_OS_WINRT;SQLITE_ENABLE_UNLOCK_NOTIFY;SQLITE_TEMP_STORE=2;SQLITE_ENABLE_UNLOCK_NOTIFY;_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SQLITE_ENABLE_FTS4;SQLITE_OS_WINRT;SQLITE_ENABLE_UNLOCK_NOTIFY;SQLITE_TEMP_STORE=2;_WINRT_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">SQLITE_ENABLE_FTS4;SQLITE_OS_WINRT;SQLITE_ENABLE_UNLOCK_NOTIFY;SQLITE_TEMP_STORE=2;_WINRT_DLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">SQLITE_ENABLE_FTS4;SQLITE_OS_WINRT;SQLITE_ENABLE_UNLOCK_NOTIFY;SQLITE_TEMP_STORE=2;_WINRT_DLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SQLITE_ENABLE_FTS4;SQLITE_OS_WINRT;SQLITE_ENABLE_UNLOCK_NOTIFY;SQLITE_TEMP_STORE=2;_WINRT_DLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="Statement.cpp" />
   </ItemGroup>
@@ -187,6 +193,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <ShowProgress>LinkVerbose</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -199,6 +206,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <ShowProgress>LinkVerbose</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
