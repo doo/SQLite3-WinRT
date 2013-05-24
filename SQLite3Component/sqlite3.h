@@ -109,7 +109,7 @@ extern "C" {
 */
 #define SQLITE_VERSION        "3.7.17"
 #define SQLITE_VERSION_NUMBER 3007017
-#define SQLITE_SOURCE_ID      "2013-04-29 09:17:42 52417eac3ecaec2dbbde170334358f5ddbd32501"
+#define SQLITE_SOURCE_ID      "2013-05-20 00:56:22 118a3b35693b134d56ebd780123b7fd6f1497668"
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
@@ -3275,6 +3275,9 @@ typedef struct sqlite3_context sqlite3_context;
 ** parameter [SQLITE_LIMIT_VARIABLE_NUMBER] (default value: 999).
 **
 ** ^The third argument is the value to bind to the parameter.
+** ^If the third parameter to sqlite3_bind_text() or sqlite3_bind_text16()
+** or sqlite3_bind_blob() is a NULL pointer then the fourth parameter
+** is ignored and the end result is the same as sqlite3_bind_null().
 **
 ** ^(In those routines that have a fourth argument, its value is the
 ** number of bytes in the parameter.  To be clear: the value is the
