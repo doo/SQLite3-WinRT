@@ -31,6 +31,9 @@
     <AppxManifest Include="package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>
+    <Content Include="..\SQLite3JS\js\SQLite3.js">
+      <Link>js\SQLite3.js</Link>
+    </Content>
     <Content Include="default.html" />
     <Content Include="html\javascript-background-task.html" />
     <Content Include="html\sample-background-task-with-condition.html" />
@@ -53,7 +56,6 @@
     <Content Include="js\sample-background-task-with-condition.js" />
     <Content Include="js\sample-background-task.js" />
     <Content Include="js\servicing-complete.js" />
-    <Content Include="js\SQLite3.js" />
     <Content Include="js\time-trigger-background-task.js" />
     <Content Include="sample-utils\sample-utils.css" />
     <Content Include="sample-utils\footer.html" />
