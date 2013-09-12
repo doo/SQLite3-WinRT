@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
-  <Identity Name="Microsoft.SDKSamples.BackgroundTask.JS" Version="1.0.0.0" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+  <Identity Name="Microsoft.SDKSamples.BackgroundTask.SQLite3JS" Version="1.0.0.0" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
   <Properties>
-    <DisplayName>BackgroundTask JS sample</DisplayName>
+    <DisplayName>BackgroundTask JS sample with SQLite3JS</DisplayName>
     <PublisherDisplayName>Microsoft Corporation</PublisherDisplayName>
     <Logo>images\storeLogo-sdk.png</Logo>
   </Properties>

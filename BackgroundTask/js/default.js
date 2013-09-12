@@ -48,7 +48,7 @@
                         return SQLite3JS
                             .openAsync(path)
                             .then(function (db) {
-                                return db.runAsync('CREATE TABLE [Foo] ([ID] guid NOT NULL, [test] TEXT, [Bar] TEXT NOT NULL,  CONSTRAINT [Foo1] PRIMARY KEY ([ID]));')
+                              return db.runAsync('CREATE TABLE foo (id INT PRIMARY KEY, test TEXT, Bar TEXT NOT NULL)')
                                 .then(function (results) {
                                     db.close();
                                     return results;

@@ -49,10 +49,12 @@
                 .openAsync(path)
                 .then(function (db) {
                     return db
-                        .runAsync("INSERT INTO Foo (ID, Bar) VALUES (x'D07F4419CA1411E29A0E000C29A0AB34', 'Hello');")
+                        .runAsync("INSERT INTO Foo (Bar) VALUES ('Hello')")
                         .then(function (results) {
                             db.close();
                             return results;
+                        }, function (error) {
+                          console.error(error);
                         });
                 })
                 .then(function () {
