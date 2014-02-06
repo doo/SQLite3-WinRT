@@ -432,6 +432,22 @@
       });
     });
 
+    describe('Opening databases', function () {
+      it('should open file with URI notation', function () {
+        var thisSpec = this,
+            path = Windows.Storage.ApplicationData.current.temporaryFolder.path + "\\uritest.db",
+            uri = new Windows.Foundation.Uri(path);
+        spec.async(
+          SQLite3JS.openAsync(uri.rawUri).then(function (db) {
+            expect(db).not.toBeNull();
+            db.close();
+          }, function (error) {
+            thisSpec.fail('The error handler was called.');
+          })
+        );
+      });
+    });
+
     describe('Error Handling', function () {
       it('should throw when creating an invalid database', function () {
         var thisSpec = this;
