@@ -164,13 +164,17 @@ namespace SQLite3 {
       std::wostringstream output;
       GetRow(output);
       auto row = ref new Platform::String(output.str().c_str());
-      auto callbackTask = Concurrency::task<void>(
-        dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, 
-        ref new Windows::UI::Core::DispatchedHandler([row, callback]() {
-          callback(row);
-        }))
-      );
-      callbackTask.get();    
+      if (dispatcher) {
+        auto callbackTask = Concurrency::task<void>(
+          dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::Normal, 
+          ref new Windows::UI::Core::DispatchedHandler([row, callback]() {
+            callback(row);
+          }))
+        );
+        callbackTask.get();
+      } else {
+        callback(row);
+      }      
     }
   }
 

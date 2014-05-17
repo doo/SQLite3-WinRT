@@ -96,8 +96,8 @@ namespace SQLite3 {
     }
 
     // Need to remember the current thread for later callbacks into JS
-    CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread()->Dispatcher;
-    
+    CoreDispatcher^ dispatcher = CoreWindow::GetForCurrentThread() ? CoreWindow::GetForCurrentThread()->Dispatcher : nullptr;
+
     return Concurrency::create_async([dbPath, dispatcher]() {
       sqlite3* sqlite;
       int ret = sqlite3_open16(dbPath->Data(), &sqlite);
@@ -178,30 +178,45 @@ namespace SQLite3 {
         if (insertChangeHandlers) {
           ChangeEvent event;
           event.RowId = rowId;
-          event.TableName = ToPlatformString(tableName);        
-          handler = ref new DispatchedHandler([this, event]() {
+          event.TableName = ToPlatformString(tableName);
+          if (dispatcher == nullptr) {
             _Insert(this, event);
-          });
+            return;
+          } else {
+            handler = ref new DispatchedHandler([this, event]() {
+              _Insert(this, event);
+            });
+          }
         }
         break;
       case SQLITE_UPDATE:
         if (updateChangeHandlers) {
           ChangeEvent event;
           event.RowId = rowId;
-          event.TableName = ToPlatformString(tableName);        
-          handler = ref new DispatchedHandler([this, event]() {
+          event.TableName = ToPlatformString(tableName);
+          if (dispatcher == nullptr) {
             _Update(this, event);
-          });
+            return;
+          } else {
+            handler = ref new DispatchedHandler([this, event]() {
+              _Update(this, event);
+            });
+          }
         }
         break;
       case SQLITE_DELETE:
         if (deleteChangeHandlers) {
           ChangeEvent event;
           event.RowId = rowId;
-          event.TableName = ToPlatformString(tableName);        
-          handler = ref new DispatchedHandler([this, event]() {
-            _Delete(this, event);
-          });
+          event.TableName = ToPlatformString(tableName);
+          if (dispatcher == nullptr) {
+            _Insert(this, event);
+            return;
+          } else {
+            handler = ref new DispatchedHandler([this, event]() {
+              _Delete(this, event);
+            });
+          }
         }
         break;
       }
