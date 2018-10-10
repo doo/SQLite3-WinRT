@@ -1,4 +1,11 @@
-# SQLite3-WinRT
+# NO LONGER MAINTAINED
+
+This repository is no longer maintained.
+
+Find the active repo at https://github.com/pke/SQLite3-WinRT and file [Issues](https://github.com/pke/SQLite3-WinRT/issues) and [Pull-Requests](https://github.com/pke/SQLite3-WinRT/pulls) over there.
+
+
+## SQLite3-WinRT
 
 Async SQLite for (JavaScript) Windows Store apps.
 
